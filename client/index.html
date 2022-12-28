@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body style="margin:0">
+    <canvas id="game-canvas" style="width: 100%;height:100vh"></canvas>
+    <script type="module">
+      import init from './pkg/client.js';
+      init()
+      start(document.getElementById("game-canvas"))
+    </script>
+  </body>
+</html>
