@@ -1,6 +1,8 @@
 use crate::tile::{ClientTile, ServerTile, TileContent};
+#[cfg(feature = "server")]
 use rand::prelude::*;
 
+#[cfg(feature = "server")]
 #[derive(Debug)]
 pub struct ServerGrid {
     tiles: Vec<Vec<ServerTile>>,
@@ -23,6 +25,7 @@ const NEIGHBORS: [(i32, i32); 8] = [
 ];
 //
 
+#[cfg(feature = "server")]
 impl ServerGrid {
     pub fn generate(
         (width, height): (usize, usize),
@@ -82,6 +85,7 @@ impl ServerGrid {
 //     }
 // }
 
+#[cfg(feature = "server")]
 impl From<&ServerGrid> for ClientGrid {
     fn from(value: &ServerGrid) -> ClientGrid {
         ClientGrid {

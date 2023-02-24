@@ -11,7 +11,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen = "0.2.63"
-
+game = { path = "../game" }
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
@@ -22,6 +22,8 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 # compared to the default allocator's ~10K. It is slower than the default
 # allocator, however.
 wee_alloc = { version = "0.4.5", optional = true }
+js-sys = "0.3.61"
+no-panic = "0.1.19"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
@@ -31,13 +33,18 @@ wasm-bindgen-test = "0.3.13"
 opt-level = "s"
 
 
+
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
   'HtmlCanvasElement',
   'CanvasRenderingContext2d',
-  # 'HtmlElement',
+  'HtmlImageElement',
   'Document',
   'Window',
   'console',
+  'UiEvent',
+  'MouseEvent',
+  'CssStyleDeclaration'
 ]
+
