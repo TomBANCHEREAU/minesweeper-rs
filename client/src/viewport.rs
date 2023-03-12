@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{console::log_1, CanvasRenderingContext2d, HtmlCanvasElement, MouseEvent, UiEvent};
+use web_sys::{console::log_1, CanvasRenderingContext2d, HtmlCanvasElement, MouseEvent};
 
 use crate::{
     handles::{animation::AnimationHandle, click::ClickHandle, resize::ResizeHandle},

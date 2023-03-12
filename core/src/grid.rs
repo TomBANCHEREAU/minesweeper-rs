@@ -1,4 +1,4 @@
-use crate::tile::{ClientTile, ServerTile, TileContent};
+use crate::tile::{ServerTile, TileContent};
 #[cfg(feature = "server")]
 use rand::prelude::*;
 
@@ -8,10 +8,10 @@ pub struct ServerGrid {
     tiles: Vec<Vec<ServerTile>>,
 }
 
-#[derive(Debug)]
-pub struct ClientGrid {
-    tiles: Vec<Vec<ClientTile>>,
-}
+// #[derive(Debug)]
+// pub struct ClientGrid {
+//     tiles: Vec<Vec<ClientTile>>,
+// }
 
 const NEIGHBORS: [(i32, i32); 8] = [
     (-1, -1),
@@ -85,15 +85,15 @@ impl ServerGrid {
 //     }
 // }
 
-#[cfg(feature = "server")]
-impl From<&ServerGrid> for ClientGrid {
-    fn from(value: &ServerGrid) -> ClientGrid {
-        ClientGrid {
-            tiles: value
-                .tiles
-                .iter()
-                .map(|slice| slice.iter().map(|tile| tile.into()).collect())
-                .collect(),
-        }
-    }
-}
+// #[cfg(feature = "server")]
+// impl From<&ServerGrid> for ClientGrid {
+//     fn from(value: &ServerGrid) -> ClientGrid {
+//         ClientGrid {
+//             tiles: value
+//                 .tiles
+//                 .iter()
+//                 .map(|slice| slice.iter().map(|tile| tile.into()).collect())
+//                 .collect(),
+//         }
+//     }
+// }

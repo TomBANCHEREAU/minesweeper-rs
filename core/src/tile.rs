@@ -25,6 +25,11 @@ pub enum TileContent {
     Bomb,
 }
 
+// struct Tile {
+//     mine: bool,
+//     surounding_mine: u8,
+// }
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ServerTile {
     pub(crate) content: TileContent,
