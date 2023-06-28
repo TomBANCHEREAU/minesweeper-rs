@@ -1,5 +1,7 @@
+// pub mod controller;
 pub mod handles;
 pub mod image;
+pub mod socket;
 pub mod utils;
 pub mod viewport;
 
@@ -23,7 +25,9 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 pub fn start(canvas_id: String) {
     set_panic_hook();
-    let _viewport = Viewport::new(ViewportOptions { canvas_id });
-    // log_1(&JsValue::from_f64(canvas.width() as f64));
-    // let game_state:
+    Viewport::new(ViewportOptions {
+        canvas_id,
+        lobby: "debug".to_string(),
+    })
+    .unwrap();
 }

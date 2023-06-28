@@ -1,8 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use wasm_bindgen::{prelude::Closure, JsCast};
 
-use crate::utils::get_window;
+use crate::{
+    utils::get_window,
+    viewport::{self, MutexedViewport, Viewport},
+};
 
 pub struct AnimationHandle {
     handle_id: Rc<RefCell<i32>>,
@@ -10,13 +13,14 @@ pub struct AnimationHandle {
 }
 
 impl AnimationHandle {
-    pub fn new<F: Fn() + 'static>(function: F) -> Self {
+    pub fn new(viewport: &MutexedViewport) -> Self {
+        let viewport = Arc::clone(viewport);
         let _closure = Rc::new(RefCell::new(None::<Closure<dyn Fn()>>));
         let closure_cloned = _closure.clone();
         let handle_id = Rc::new(RefCell::new(0));
         let handle_id_cloned = handle_id.clone();
         *_closure.borrow_mut() = Some(Closure::<dyn Fn()>::new(move || {
-            function();
+            viewport.lock().unwrap().on_animation_frame();
             *handle_id_cloned.borrow_mut() = get_window()
                 .request_animation_frame(
                     closure_cloned

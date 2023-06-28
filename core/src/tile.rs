@@ -1,51 +1,36 @@
-// pub enum ClientTile {
-//     Untouched,
-//     Flagged,
-//     Discovered(TileContent),
-// }
+use serde::{Deserialize, Serialize};
 
-struct ClientTile {
-    flagged: bool,
-    covered: bool,
+/*
+ * Keep it simple for now
+ * - TileContent save the real content of the tile
+ * - TileState save the client side state
+ * - Tile save the client side state and the real content
+ */
+// #[cfg(feature = "server")]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Tile {
+    pub content: TileContent,
+    pub state: TileState,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum TileState {
-    #[default]
-    Untouched,
-    Flagged,
-    Discovered,
+// #[cfg(feature = "server")]
+impl Tile {
+    pub fn as_client(&self) -> TileState {
+        self.state
+    }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum TileContent {
     #[default]
     Empty,
     Number(u8),
     Bomb,
 }
-
-// struct Tile {
-//     mine: bool,
-//     surounding_mine: u8,
-// }
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ServerTile {
-    pub(crate) content: TileContent,
-    state: TileState,
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub enum TileState {
+    #[default]
+    Untouched,
+    Flagged,
+    Discovered(TileContent),
 }
-
-//
-
-// impl From<&ServerTile> for ClientTile {
-//     fn from(value: &ServerTile) -> ClientTile {
-//         ClientTile {
-//             content: match value.state {
-//                 TileState::Discovered => Some(value.content),
-//                 _ => None,
-//             },
-//             state: value.state,
-//         }
-//     }
-// }

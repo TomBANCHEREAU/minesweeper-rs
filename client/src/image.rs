@@ -1,3 +1,4 @@
+use core::tile::{TileContent, TileState};
 use web_sys::{CanvasRenderingContext2d, HtmlImageElement};
 
 pub enum Sprite {
@@ -30,6 +31,28 @@ impl From<Sprite> for (f64, f64, f64, f64) {
             Sprite::Eight => (128., 23., 16., 16.),
             Sprite::Flag => (16., 39., 16., 16.),
             Sprite::Covered => (0., 39., 16., 16.),
+        }
+    }
+}
+
+impl From<&TileState> for Sprite {
+    fn from(value: &TileState) -> Sprite {
+        match value {
+            TileState::Untouched => Sprite::Covered,
+            TileState::Flagged => Sprite::Flag,
+            TileState::Discovered(content) => match content {
+                TileContent::Empty => Sprite::Empty,
+                TileContent::Number(1) => Sprite::One,
+                TileContent::Number(2) => Sprite::Two,
+                TileContent::Number(3) => Sprite::Three,
+                TileContent::Number(4) => Sprite::Four,
+                TileContent::Number(5) => Sprite::Five,
+                TileContent::Number(6) => Sprite::Six,
+                TileContent::Number(7) => Sprite::Seven,
+                TileContent::Number(8) => Sprite::Eight,
+                TileContent::Bomb => Sprite::Bomb,
+                TileContent::Number(_) => todo!(),
+            },
         }
     }
 }
