@@ -23,11 +23,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 // }
 
 #[wasm_bindgen]
-pub fn start(canvas_id: String) {
+pub fn start(canvas_id: String, lobby_id: String) {
     set_panic_hook();
     Viewport::new(ViewportOptions {
         canvas_id,
-        lobby: "debug".to_string(),
+        lobby: lobby_id,
     })
     .unwrap();
 }

@@ -50,7 +50,7 @@ impl Viewport {
         let context = get_context(&canvas)?;
         let url = web_sys::Url::new(window().unwrap().location().href().unwrap().as_str()).unwrap();
         url.set_protocol(url.protocol().replace("http", "ws").as_str());
-        url.set_pathname(format!("/lobby/{}", options.lobby).as_str());
+        url.set_pathname(format!("/api/lobby/{}/ws", options.lobby).as_str());
         let socket = WebSocket::new((url.href()).as_str()).map_err(|op| {
             op.as_string()
                 .unwrap_or("Could not create socket".to_string())
@@ -155,14 +155,14 @@ impl Viewport {
         if !self.redraw {
             return;
         }
-        for x in 0..20 {
-            for y in 0..20 {
-                let sprite = Sprite::from(self.grid.get(x, y).unwrap());
+        for x in 0..self.grid.grid.len() {
+            for y in 0..self.grid.grid.get(0).unwrap().len() {
+                let sprite = Sprite::from(self.grid.get(x as i32, y as i32).unwrap());
                 self.image_manager.draw_sprite(
                     &self.context,
                     sprite,
-                    f64::from(x) * 16.,
-                    f64::from(y) * 16.,
+                    f64::from(x as i32) * 16.,
+                    f64::from(y as i32) * 16.,
                     16.,
                     16.,
                 );

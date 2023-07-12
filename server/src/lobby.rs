@@ -1,4 +1,5 @@
-use actix::Addr;
+use actix::{Actor, Addr, AsyncContext, Handler, Message, StreamHandler};
+use actix_web_actors::ws;
 // use actix_web_actors::ws;
 // use futures_util::{stream::SplitSink, SinkExt};
 use core::{
@@ -13,8 +14,46 @@ use std::{
 // use tokio::{net::TcpStream, sync::Mutex};
 // use tokio_tungstenite::WebSocketStream;
 // use tungstenite::Message;
+pub struct WsActor {
+    pub lobby: Arc<Mutex<Lobby>>,
+}
 
-use crate::connection_handler::{GenericServerMessageWrapper, WsActor};
+impl Actor for WsActor {
+    type Context = ws::WebsocketContext<Self>;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        self.lobby.lock().unwrap().join(ctx.address());
+    }
+}
+
+impl Handler<GenericServerMessageWrapper> for WsActor {
+    type Result = ();
+    fn handle(&mut self, item: GenericServerMessageWrapper, ctx: &mut Self::Context) {
+        ctx.text(serde_json::to_string(&item.0).unwrap());
+    }
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, _: &mut Self::Context) {
+        // let Ok(msg) = msg else { return };
+        match msg.unwrap() {
+            ws::Message::Text(text) => self
+                .lobby
+                .lock()
+                .unwrap()
+                .handle_message(serde_json::from_str(text.to_string().as_str()).unwrap()),
+            ws::Message::Binary(_) => todo!(),
+            ws::Message::Continuation(_) => todo!(),
+            ws::Message::Ping(_) => todo!(),
+            ws::Message::Pong(_) => todo!(),
+            ws::Message::Close(_) => todo!(),
+            ws::Message::Nop => todo!(),
+        }
+    }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct GenericServerMessageWrapper(pub GenericServerMessage);
 
 pub type Lobbies = Mutex<HashMap<String, Arc<Mutex<Lobby>>>>;
 // type Sender = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
@@ -34,6 +73,9 @@ impl pubsub::Observer<GameEvent> for Observer {
     }
 }
 impl Lobby {
+    pub fn new(game: Game) -> Self {
+        Self { game }
+    }
     pub fn join(&mut self, sender: Addr<WsActor>) {
         self.game.subscribe(Observer { sender })
     }

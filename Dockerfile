@@ -24,6 +24,7 @@ FROM debian:bookworm
 COPY --from=clientBuilder /build/client/pkg client/pkg
 COPY --from=clientBuilder /build/client/images client/images
 COPY --from=clientBuilder /build/client/index.html client/index.html
+COPY --from=clientBuilder /build/client/lobby.html client/lobby.html
 
 COPY --from=serverBuilder /build/server/target/release/server server/server
 

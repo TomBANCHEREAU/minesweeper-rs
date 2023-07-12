@@ -13,7 +13,7 @@ use crate::tile::{Tile, TileContent, TileState};
  */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VecGrid<T> {
-    grid: Vec<Vec<T>>,
+    pub grid: Vec<Vec<T>>,
 }
 
 impl<T> VecGrid<T> {
@@ -43,12 +43,12 @@ impl Default for VecGrid<TileState> {
     }
 }
 #[cfg(feature = "server")]
-impl Default for VecGrid<Tile> {
-    fn default() -> Self {
+impl VecGrid<Tile> {
+    pub fn new(width: u8, height: u8) -> Self {
         let mut grid: Vec<Vec<Tile>> = Default::default();
-        for _y in 0..20 {
+        for _y in 0..height {
             let mut col = vec![];
-            for _x in 0..20 {
+            for _x in 0..width {
                 col.push(Tile {
                     content: TileContent::Empty,
                     state: TileState::Untouched,
@@ -57,15 +57,22 @@ impl Default for VecGrid<Tile> {
             grid.push(col);
         }
         let mut grid = Self { grid };
-        for (y, x) in (0..20)
-            .flat_map(|y| (0..20).map(move |x| (y, x)))
+        for (y, x) in (0..height)
+            .flat_map(|y| (0..width).map(move |x| (y, x)))
             .collect::<Vec<_>>()
-            .partial_shuffle(&mut ThreadRng::default(), 80)
+            .partial_shuffle(
+                &mut ThreadRng::default(),
+                usize::from(u16::from(width) * u16::from(height) / 5u16),
+            )
             .0
         {
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if let Some(Tile { content, state: _ }) = grid.get_mut(*x + dx, *y + dy) {
+            for dy in -1..=1i32 {
+                for dx in -1..=1i32 {
+                    // let Ok(newx) = usize::try_from(dx + i16::from(*x)) else {continue;};
+                    // let Ok(newy) = usize::try_from(dy + i16::from(*y)) else {continue;};
+                    if let Some(Tile { content, state: _ }) =
+                        grid.get_mut(dx + i32::from(*x), dy + i32::from(*y))
+                    {
                         if dx == 0 && dy == 0 {
                             *content = TileContent::Bomb;
                         } else {
@@ -80,6 +87,12 @@ impl Default for VecGrid<Tile> {
             }
         }
         grid
+    }
+}
+#[cfg(feature = "server")]
+impl Default for VecGrid<Tile> {
+    fn default() -> Self {
+        Self::new(20, 20)
     }
 }
 

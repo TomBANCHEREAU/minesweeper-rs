@@ -35,6 +35,12 @@ pub struct Game {
 }
 #[cfg(feature = "server")]
 impl Game {
+    pub fn new(grid: VecGrid<Tile>) -> Self {
+        Self {
+            grid,
+            listeners: Default::default(),
+        }
+    }
     pub fn play(&mut self, play: GameInput) {
         let GameInput {
             action,
