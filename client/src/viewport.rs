@@ -98,7 +98,11 @@ impl Viewport {
                     *self.grid.get_mut(x, y).unwrap() = state;
                 }
                 GameEvent::GameOver {} => todo!(),
-                GameEvent::GameStart { grid } => self.grid = grid,
+                GameEvent::GameStart { grid } => {
+                    self.grid = grid;
+                    self.canvas.set_height(self.grid.grid.len() as u32 * 16);
+                    self.canvas.set_width(self.grid.grid[0].len() as u32 * 16);
+                }
             },
         }
         self.redraw = true;
@@ -147,16 +151,13 @@ impl Viewport {
         log_1(&JsValue::from_str("on_click"))
     }
     pub fn on_resize(&mut self) {
-        self.canvas.set_width(self.canvas.client_width() as u32);
-        self.canvas.set_height(self.canvas.client_height() as u32);
-        self.redraw = true;
     }
     pub fn on_animation_frame(&mut self) {
         if !self.redraw {
             return;
         }
-        for x in 0..self.grid.grid.len() {
-            for y in 0..self.grid.grid.get(0).unwrap().len() {
+        for x in 0..self.grid.grid.get(0).unwrap().len() {
+            for y in 0..self.grid.grid.len() {
                 let sprite = Sprite::from(self.grid.get(x as i32, y as i32).unwrap());
                 self.image_manager.draw_sprite(
                     &self.context,
