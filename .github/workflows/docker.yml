@@ -3,7 +3,7 @@ name: docker build
 on:
   push:
     branches:
-      - 'main'
+      - "main"
 
 jobs:
   docker:
@@ -36,3 +36,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SSH_HOSTNAME }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: cd minesweeper-rs && docker compose up -d
