@@ -45,7 +45,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
             ws::Message::Continuation(_) => todo!(),
             ws::Message::Ping(_) => todo!(),
             ws::Message::Pong(_) => todo!(),
-            ws::Message::Close(_) => todo!(),
+            ws::Message::Close(_) => (),
             ws::Message::Nop => todo!(),
         }
     }

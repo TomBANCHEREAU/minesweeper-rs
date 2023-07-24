@@ -1,10 +1,10 @@
-use std::clone;
-
 #[cfg(feature = "server")]
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 
 use crate::tile::{Tile, TileContent, TileState};
+
+use super::Grid;
 
 /*
  * Keep it simple for now
@@ -16,17 +16,24 @@ pub struct VecGrid<T> {
     pub grid: Vec<Vec<T>>,
 }
 
-impl<T> VecGrid<T> {
-    pub fn get(&self, x: i32, y: i32) -> Option<&T> {
+impl<T> Grid for VecGrid<T> {
+    fn get(&self, x: impl TryInto<u8>, y: impl TryInto<u8>) -> Option<&T> {
+        let x: u8 = x.try_into().ok()?;
+        let y: u8 = y.try_into().ok()?;
         self.grid
             .get(usize::try_from(y).ok()?)
             .and_then(|vec| vec.get(usize::try_from(x).ok()?))
     }
-    pub fn get_mut(&mut self, x: i32, y: i32) -> Option<&mut T> {
+    fn get_mut(&mut self, x: impl TryInto<u8>, y: impl TryInto<u8>) -> Option<&mut T> {
+        let x: u8 = x.try_into().ok()?;
+        let y: u8 = y.try_into().ok()?;
         self.grid
             .get_mut(usize::try_from(y).ok()?)
             .and_then(|vec| vec.get_mut(usize::try_from(x).ok()?))
     }
+
+    type Index = u8;
+    type Tile = T;
 }
 
 impl Default for VecGrid<TileState> {
@@ -66,13 +73,11 @@ impl VecGrid<Tile> {
             )
             .0
         {
-            for dy in -1..=1i32 {
-                for dx in -1..=1i32 {
-                    // let Ok(newx) = usize::try_from(dx + i16::from(*x)) else {continue;};
-                    // let Ok(newy) = usize::try_from(dy + i16::from(*y)) else {continue;};
-                    if let Some(Tile { content, state: _ }) =
-                        grid.get_mut(dx + i32::from(*x), dy + i32::from(*y))
-                    {
+            for dy in -1..=1i16 {
+                for dx in -1..=1i16 {
+                    let Ok(x) = u8::try_from(dx + i16::from(*x)) else {continue;};
+                    let Ok(y) = u8::try_from(dy + i16::from(*y)) else {continue;};
+                    if let Some(Tile { content, state: _ }) = grid.get_mut(x, y) {
                         if dx == 0 && dy == 0 {
                             *content = TileContent::Bomb;
                         } else {
@@ -107,31 +112,3 @@ impl From<&VecGrid<Tile>> for VecGrid<TileState> {
         }
     }
 }
-// }
-
-// pub type ClientVecGrid = VecGrid<ClientTile>;
-
-// impl<T> Grid<T> for VecGrid<T> {
-//     fn get_width(&self) -> usize {
-//         self.grid.get(0).map(|vec| vec.len()).unwrap_or(0)
-//     }
-//     fn get_height(&self) -> usize {
-//         self.grid.len()
-//     }
-// fn get(&self, x: i32, y: i32) -> Option<&T> {
-//     if x < 0 || y < 0 {
-//         return None;
-//     }
-//     self.grid
-//         .get(y as usize)
-//         .and_then(|vec| vec.get(x as usize))
-// }
-// fn get_mut(&mut self, x: i32, y: i32) -> Option<&mut T> {
-//     if x < 0 || y < 0 {
-//         return None;
-//     }
-//     self.grid
-//         .get_mut(y as usize)
-//         .and_then(|vec| vec.get_mut(x as usize))
-// }
-// }

@@ -1,7 +1,8 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
+use crate::grid::Grid;
 /**
  * How can we describe the game ?
  * We can play a move
@@ -20,7 +21,6 @@ use serde::{Deserialize, Serialize};
 // }
 use crate::grid::{vec_grid::VecGrid, NEIGHBORS};
 use crate::{
-    player::Player,
     pubsub::{Observer, Subject},
     tile::{Tile, TileContent, TileState},
 };
@@ -95,9 +95,9 @@ impl Game {
                     tile.state = TileState::Discovered(tile.content);
                     let state = tile.state;
                     self.emit_event(GameEvent::TileStateUpdate { x, y, state });
-                    NEIGHBORS
-                        .iter()
-                        .for_each(|(dx, dy)| self.discover_tile(x + dx, y + dy));
+                    NEIGHBORS.iter().for_each(|(dx, dy)| {
+                        self.discover_tile(x + i32::from(*dx), y + i32::from(*dy))
+                    });
                 }
                 TileContent::Number(_) => {
                     tile.state = TileState::Discovered(tile.content);

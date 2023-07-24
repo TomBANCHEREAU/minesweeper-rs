@@ -1,13 +1,10 @@
 use core::{
     game::{GameAction, GameEvent},
-    grid::vec_grid::VecGrid,
+    grid::{vec_grid::VecGrid, Grid},
     messages::{GenericClientMessage, GenericServerMessage},
-    tile::TileState,
+    tile::{TileContent, TileState},
 };
-use std::{
-    default,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     console::log_1, window, CanvasRenderingContext2d, HtmlCanvasElement, MouseEvent, WebSocket,
@@ -42,6 +39,7 @@ pub struct Viewport {
     click_handle: Option<ClickHandle>,
     message_handle: Option<MessageHandle>,
     socket: WebSocket,
+    last_click: Option<MouseEvent>,
 }
 
 impl Viewport {
@@ -66,6 +64,7 @@ impl Viewport {
             socket,
             grid: Default::default(),
             redraw: true,
+            last_click: None,
         }));
         let mut viewport = mutexed_viewport.lock().unwrap();
 
@@ -110,8 +109,50 @@ impl Viewport {
     pub fn on_click(&mut self, event: MouseEvent) {
         let x = event.x() / 16;
         let y = event.y() / 16;
+        let button = event.button();
+        if let Some(last_mouse_event) = &self.last_click {
+            let last_x = last_mouse_event.x() / 16;
+            let last_y = last_mouse_event.y() / 16;
+            if last_x == x
+                && last_y == y
+                && event.time_stamp() - last_mouse_event.time_stamp() < 200.0
+            {
+                if let Some(TileState::Discovered(TileContent::Number(bomb_count))) =
+                    self.grid.get(x, y)
+                {
+                    let neighbors = self.grid.iter_around(x, y);
+                    let (flag_count, discoverable_tiles) =
+                        neighbors.fold((0, vec![]), |mut acc, neighbor| {
+                            match neighbor.1 {
+                                TileState::Untouched => acc.1.push(neighbor.0),
+                                TileState::Flagged => acc.0 += 1,
+                                TileState::Discovered(_) => (),
+                            }
+                            return acc;
+                        });
+                    if flag_count == *bomb_count {
+                        for (x, y) in discoverable_tiles {
+                            self.socket
+                                .send_with_str(
+                                    serde_json::to_string(&GenericClientMessage::GameAction(
+                                        GameAction::Discover {
+                                            x: x.into(),
+                                            y: y.into(),
+                                        },
+                                    ))
+                                    .unwrap()
+                                    .as_str(),
+                                )
+                                .unwrap()
+                        }
+                    }
+                }
+                return;
+            }
+        }
+        self.last_click = Some(event);
         if let Some(tile) = self.grid.get(x, y) {
-            match event.button() {
+            match button {
                 0 => self
                     .socket
                     .send_with_str(
@@ -150,8 +191,7 @@ impl Viewport {
         }
         log_1(&JsValue::from_str("on_click"))
     }
-    pub fn on_resize(&mut self) {
-    }
+    pub fn on_resize(&mut self) {}
     pub fn on_animation_frame(&mut self) {
         if !self.redraw {
             return;
