@@ -1,14 +1,15 @@
 use std::fmt::Debug;
+use std::{default, vec};
 
 use serde::{Deserialize, Serialize};
 
+use crate::grid::impl_vec_grid::VecGridConfig;
 use crate::grid::Grid;
 /**
  * How can we describe the game ?
  * We can play a move
  * We can listen to get an update if something change
  */
-// pub mod r#trait {
 //     pub trait Game<'a> {
 //         type Move;
 //         type Event;
@@ -18,77 +19,98 @@ use crate::grid::Grid;
 //         fn listen(&mut self, callback: &'a dyn Fn(Self::Event) -> ());
 //         // fn listen_area(&mut self); ?
 //     }
-// }
-use crate::grid::{vec_grid::VecGrid, NEIGHBORS};
+use crate::grid::{impl_vec_grid::VecGrid, NEIGHBORS};
 use crate::{
     pubsub::{Observer, Subject},
     tile::{Tile, TileContent, TileState},
 };
 
-// pub trait GameObserver: Observer<GameEvent> {}
+type Listeners = Vec<Box<dyn Observer<GameEvent>>>;
+#[cfg(feature = "server")]
+pub struct Game {
+    listeners: Listeners,
+    config: VecGridConfig,
+    state: GameState,
+}
+#[derive(Default)]
+pub enum GameState {
+    #[default]
+    Waiting,
+    Started {
+        grid: VecGrid<Tile>,
+    },
+    Over {
+        grid: VecGrid<Tile>,
+        win: bool,
+    },
+}
 
 #[cfg(feature = "server")]
-#[derive(Default)]
-pub struct Game {
-    grid: VecGrid<Tile>,
-    listeners: Vec<Box<dyn Observer<GameEvent>>>,
-}
-#[cfg(feature = "server")]
 impl Game {
-    pub fn new(grid: VecGrid<Tile>) -> Self {
+    pub fn new(config: VecGridConfig) -> Self {
         Self {
-            grid,
-            listeners: Default::default(),
+            listeners: vec![],
+            config,
+            state: GameState::Waiting,
         }
     }
     pub fn play(&mut self, play: GameInput) {
-        let GameInput {
-            action,
-            // player: player,
-        } = play;
-        match action {
-            GameAction::Discover { x, y } => {
-                self.discover_tile(x, y);
+        match &mut self.state {
+            GameState::Waiting => {
+                let GameInput {
+                    action: GameAction::Discover { x, y },
+                } = play else { return };
+                self.state = GameState::Started {
+                    grid: self.config.build(x, y),
+                }
             }
-            GameAction::PlaceFlag { x, y } => {
-                if let Some(tile) = self.grid.get_mut(x, y) {
-                    match tile.state {
-                        TileState::Untouched => {
-                            tile.state = TileState::Flagged;
-                            self.emit_event(GameEvent::TileStateUpdate {
-                                x,
-                                y,
-                                state: TileState::Flagged,
-                            })
+            GameState::Started { grid } => {
+                let GameInput {
+                    action,
+                    // player: player,
+                } = play;
+                match action {
+                    GameAction::Discover { x, y } => {
+                        self.discover_tile(x, y);
+                    }
+                    GameAction::PlaceFlag { x, y } => {
+                        if let Some(tile) = grid.get_mut(x, y) {
+                            match tile.state {
+                                TileState::Untouched => {
+                                    tile.state = TileState::Flagged;
+                                    self.emit_event(GameEvent::TileStateUpdate {
+                                        x,
+                                        y,
+                                        state: TileState::Flagged,
+                                    })
+                                }
+                                TileState::Flagged | TileState::Discovered(_) => (),
+                            }
                         }
-                        TileState::Flagged | TileState::Discovered(_) => (),
+                    }
+                    GameAction::RemoveFlag { x, y } => {
+                        if let Some(tile) = grid.get_mut(x, y) {
+                            match tile.state {
+                                TileState::Flagged => {
+                                    tile.state = TileState::Untouched;
+                                    self.emit_event(GameEvent::TileStateUpdate {
+                                        x,
+                                        y,
+                                        state: TileState::Untouched,
+                                    })
+                                }
+                                TileState::Untouched | TileState::Discovered(_) => (),
+                            }
+                        }
                     }
                 }
             }
-            GameAction::RemoveFlag { x, y } => {
-                if let Some(tile) = self.grid.get_mut(x, y) {
-                    match tile.state {
-                        TileState::Flagged => {
-                            tile.state = TileState::Untouched;
-                            self.emit_event(GameEvent::TileStateUpdate {
-                                x,
-                                y,
-                                state: TileState::Untouched,
-                            })
-                        }
-                        TileState::Untouched | TileState::Discovered(_) => (),
-                    }
-                }
-            }
+            GameState::Over { grid, win } => todo!(),
         }
     }
-    fn emit_event(&mut self, event: GameEvent) {
-        self.listeners
-            .iter_mut()
-            .for_each(|listener| listener.notify(event.clone()));
-    }
     fn discover_tile(&mut self, x: i32, y: i32) {
-        let Some(tile) = self.grid.get_mut(x, y) else { return };
+        let GameState::Started { grid } = &mut self.state else { return };
+        let Some(tile) = grid.get_mut(x, y) else { return };
         match tile.state {
             TileState::Untouched => match tile.content {
                 TileContent::Empty => {
@@ -108,6 +130,11 @@ impl Game {
             },
             TileState::Flagged | TileState::Discovered(_) => (),
         }
+    }
+    fn emit_event(&mut self, event: GameEvent) {
+        self.listeners
+            .iter_mut()
+            .for_each(|listener| listener.notify(event.clone()));
     }
 }
 
@@ -136,6 +163,7 @@ pub enum GameAction {
  */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum GameEvent {
+    Config { config: VecGridConfig },
     GameStart { grid: VecGrid<TileState> },
     TileStateUpdate { x: i32, y: i32, state: TileState },
     GameOver {},
@@ -147,9 +175,14 @@ pub enum GameEvent {
 #[cfg(feature = "server")]
 impl Subject<GameEvent> for Game {
     fn subscribe(&mut self, mut observer: impl Observer<GameEvent> + 'static) {
-        observer.notify(GameEvent::GameStart {
-            grid: VecGrid::<TileState>::from(&self.grid),
+        observer.notify(GameEvent::Config {
+            config: self.config.clone(),
         });
+        if let GameState::Started { grid } = &self.state {
+            observer.notify(GameEvent::GameStart {
+                grid: VecGrid::<TileState>::from(grid),
+            });
+        }
         self.listeners.push(Box::new(observer));
     }
 

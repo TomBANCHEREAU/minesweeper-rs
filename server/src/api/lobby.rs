@@ -1,4 +1,4 @@
-use core::{game::Game, grid::vec_grid::VecGrid, tile::Tile};
+use core::{game::Game, grid::impl_vec_grid::VecGridConfig, tile::Tile};
 use std::sync::{Arc, Mutex};
 
 use actix_web::{
@@ -14,8 +14,7 @@ use crate::lobby::{Lobbies, Lobby, WsActor};
 
 #[derive(Deserialize)]
 pub struct CreateLobbyBody {
-    grid_width: u8,
-    grid_height: u8,
+    grid_config: VecGridConfig,
 }
 
 #[get("")]
@@ -30,10 +29,9 @@ pub async fn create(
     body: web::Form<CreateLobbyBody>,
 ) -> impl Responder {
     let id = nanoid!();
-    let new_lobby = Arc::new(Mutex::new(Lobby::new(Game::new(VecGrid::<Tile>::new(
-        body.grid_width,
-        body.grid_height,
-    )))));
+    let new_lobby = Arc::new(Mutex::new(Lobby::new(Game::new(
+        body.into_inner().grid_config,
+    ))));
     lobbies.lock().unwrap().insert(id.clone(), new_lobby);
     Redirect::to(format!("/lobby.html?id={}", id)).see_other()
 }

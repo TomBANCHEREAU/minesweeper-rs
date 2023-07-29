@@ -45,7 +45,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
             ws::Message::Continuation(_) => todo!(),
             ws::Message::Ping(_) => todo!(),
             ws::Message::Pong(_) => todo!(),
-            ws::Message::Close(_) => (),
+            ws::Message::Close(_) => todo!(),
             ws::Message::Nop => todo!(),
         }
     }
@@ -58,7 +58,6 @@ pub struct GenericServerMessageWrapper(pub GenericServerMessage);
 pub type Lobbies = Mutex<HashMap<String, Arc<Mutex<Lobby>>>>;
 // type Sender = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
 
-#[derive(Default)]
 pub struct Lobby {
     game: Game,
 }

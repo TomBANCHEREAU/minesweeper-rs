@@ -1,6 +1,6 @@
 use core::{
     game::{GameAction, GameEvent},
-    grid::{vec_grid::VecGrid, Grid},
+    grid::{impl_vec_grid::VecGrid, Grid},
     messages::{GenericClientMessage, GenericServerMessage},
     tile::{TileContent, TileState},
 };
@@ -29,7 +29,7 @@ pub struct ViewportOptions {
 // }
 pub type MutexedViewport = Arc<Mutex<Viewport>>;
 pub struct Viewport {
-    grid: VecGrid<TileState>,
+    grid: Option<VecGrid<TileState>>,
     redraw: bool,
     canvas: HtmlCanvasElement,
     context: CanvasRenderingContext2d,
@@ -62,7 +62,7 @@ impl Viewport {
             click_handle: None,
             message_handle: None,
             socket,
-            grid: Default::default(),
+            grid: None,
             redraw: true,
             last_click: None,
         }));

@@ -1,5 +1,6 @@
 // pub mod chunk;
-pub mod vec_grid;
+pub mod builder;
+pub mod impl_vec_grid;
 
 pub const NEIGHBORS: [(i8, i8); 8] = [
     (-1, -1),
@@ -40,22 +41,20 @@ pub trait Grid {
             index: 0,
         }
     }
-    // fn iter_position_around(
-    //     &self,
+    // fn iter_mut_around<'a>(
+    //     &'a mut self,
     //     x: impl TryInto<Self::Index>,
     //     y: impl TryInto<Self::Index>,
-    // ) -> IntoIter<&(i8, i8)> {
-    //     let x: Option<Self::Index> = x.try_into().ok();
-    //     let y: Option<Self::Index> = y.try_into().ok();
-    //     let out = NEIGHBORS
-    //         .iter()
-    //         .filter(|(dx, dy)| {
-    //             let Some(x) = x.and_then(|x|x.try_add(*dx)) else { return false };
-    //             let Some(y) = y.and_then(|y|y.try_add(*dy)) else { return false };
-    //             return true;
-    //         })
-    //         .collect::<Vec<_>>();
-    //     out.into_iter()
+    // ) -> NeighborsIterMut<'a, Self>
+    // where
+    //     Self: Sized,
+    // {
+    //     NeighborsIterMut {
+    //         grid: self,
+    //         x: x.try_into().ok(),
+    //         y: y.try_into().ok(),
+    //         index: 0,
+    //     }
     // }
 }
 
@@ -96,3 +95,26 @@ impl<'a, G: Grid> Iterator for NeighborsIter<'a, G> {
         None
     }
 }
+
+// pub struct NeighborsIterMut<'a, G: Grid> {
+//     grid: &'a mut G,
+//     x: Option<G::Index>,
+//     y: Option<G::Index>,
+//     index: usize,
+// }
+
+// impl<'a, G: Grid> Iterator for NeighborsIterMut<'a, G> {
+//     type Item = ((G::Index, G::Index), &'a mut G::Tile);
+//     fn next<'b: 'a>(&'b mut self) -> Option<Self::Item> {
+//         while self.index != 8 {
+//             let (dx, dy) = NEIGHBORS[self.index];
+//             self.index += 1;
+//             let Some(x) = self.x.as_ref()?.try_add(dx) else {continue;};
+//             let Some(y) = self.y.as_ref()?.try_add(dy) else {continue;};
+//             if let Some(tile) = self.grid.get_mut(x, y) {
+//                 return Some(((x, y), tile));
+//             }
+//         }
+//         None
+//     }
+// }
