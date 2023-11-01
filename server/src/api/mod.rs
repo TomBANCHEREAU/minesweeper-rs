@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 
 use crate::lobby::Lobbies;
 
@@ -26,6 +26,7 @@ impl ApiConfig {
                     .app_data(lobbies)
                     .service(lobby::create)
                     .service(lobby::get_index)
+                    .service(lobby::get_lobby)
                     .service(lobby::lobby_ws),
             );
             // .route(

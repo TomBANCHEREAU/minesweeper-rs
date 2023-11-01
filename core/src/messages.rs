@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::game::{GameAction, GameEvent, GameInput};
+use crate::game::{GameAction, GameEvent};
 
 pub trait ClientMessage: Serialize + DeserializeOwned + Into<GenericClientMessage> {
     type ServerResponse: Serialize + DeserializeOwned;

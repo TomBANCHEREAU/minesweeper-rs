@@ -3,7 +3,7 @@
 [workspace]
 
 members = [
-  "client",
   "server",
+  "client",
   "core",
 ]

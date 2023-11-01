@@ -1,34 +1,25 @@
-FROM rust:bookworm as clientBuilder
+FROM rust:bookworm as builder
 
+RUN cargo install cargo-make trunk
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+RUN rustup target add wasm32-unknown-unknown
 
 WORKDIR /build
 COPY core core
+COPY model model
 COPY client client
-
-WORKDIR /build/client
-RUN wasm-pack build --release --target web
-
-
-FROM rust:bookworm as serverBuilder
-
-WORKDIR /build
-COPY core core
 COPY server server
+COPY Cargo.toml .
 
-WORKDIR /build/server
-RUN cargo build --release
+RUN cargo make build
 
-FROM debian:bookworm
+FROM debian:bookworm as runner
 
-COPY --from=clientBuilder /build/client/pkg client/pkg
-COPY --from=clientBuilder /build/client/images client/images
-COPY --from=clientBuilder /build/client/index.html client/index.html
-COPY --from=clientBuilder /build/client/lobby.html client/lobby.html
+COPY --from=builder /build/client/dist client/dist
+COPY --from=builder /build/client/images client/images
 
-COPY --from=serverBuilder /build/server/target/release/server server/server
+COPY --from=builder /build/target/release/server server/server
 
-EXPOSE 8080
+EXPOSE 9000
 
 CMD [ "server/server" ]
-

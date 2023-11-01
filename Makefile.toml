@@ -1,0 +1,13 @@
+[tasks.dev]
+workspace = false
+run_task = { name = ["dev-client","dev-server"], parallel = true }
+
+[tasks.dev-client]
+workspace = false
+env = { CARGO_MAKE_WORKSPACE_INCLUDE_MEMBERS = ["client"]}
+run_task = { name = ["workspace-dev"], fork=true }
+
+[tasks.dev-server]
+workspace = false
+env = { CARGO_MAKE_WORKSPACE_INCLUDE_MEMBERS = ["server"]}
+run_task = { name = ["workspace-dev"], fork=true }

@@ -57,43 +57,27 @@ impl From<&TileState> for Sprite {
     }
 }
 
-pub struct ImageManager {
-    // load_handle: LoadHandle,
-    image_element: HtmlImageElement,
-}
-
-impl ImageManager {
-    pub fn new() -> Self {
-        let image_element = HtmlImageElement::new().unwrap();
-        image_element.set_src("/images/sprites.png");
-        image_element
-            .style()
-            .set_property("visibility", "none")
-            .unwrap();
-        Self { image_element }
-    }
-    pub fn draw_sprite(
-        &self,
-        context: &CanvasRenderingContext2d,
-        sprite: Sprite,
-        x: f64,
-        y: f64,
-        w: f64,
-        h: f64,
-    ) {
-        let (sx, sy, sw, sh) = sprite.into();
-        context
-            .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
-                &self.image_element,
-                sx,
-                sy,
-                sw,
-                sh,
-                x,
-                y,
-                w,
-                h,
-            )
-            .unwrap();
-    }
+pub fn draw_sprite(
+    image_element: &HtmlImageElement,
+    context: &CanvasRenderingContext2d,
+    sprite: Sprite,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) {
+    let (sx, sy, sw, sh) = sprite.into();
+    context
+        .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
+            image_element,
+            sx,
+            sy,
+            sw,
+            sh,
+            x,
+            y,
+            w,
+            h,
+        )
+        .unwrap();
 }

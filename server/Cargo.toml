@@ -20,5 +20,5 @@ actix-files = "0.6.2"
 actix-web-actors = "4.2.0"
 actix = "0.13.0"
 core = { path = "../core", features=["server"] }
+model = { path = "../model" }
 nanoid = "0.4.0"
-serde = "1.0.171"

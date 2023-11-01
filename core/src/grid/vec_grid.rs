@@ -15,6 +15,13 @@ use super::Grid;
 pub struct VecGrid<T> {
     pub grid: Vec<Vec<T>>,
 }
+impl<T> VecGrid<T> {
+    pub fn empty() -> Self {
+        Self {
+            grid: Vec::with_capacity(0),
+        }
+    }
+}
 
 impl<T> Grid for VecGrid<T> {
     fn get(&self, x: impl TryInto<u8>, y: impl TryInto<u8>) -> Option<&T> {

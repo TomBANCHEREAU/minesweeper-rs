@@ -4,8 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev-client": "cd client;cargo watch -c -s \"cargo build && wasm-pack build --dev --target web\"",
-    "dev-server": "cd server;cargo watch -c -x run",
     "build-client": "cd client; wasm-pack build --release --target web",
     "build-server": "cd server; cargo build --release"
   },
