@@ -15,8 +15,8 @@ use crate::app::Route;
 pub fn page_lobby_new() -> Html {
     let navigator = use_navigator().unwrap();
 
-    let grid_width = use_state(|| 10u8);
-    let grid_height = use_state(|| 12u8);
+    let grid_width = use_state(|| 15u8);
+    let grid_height = use_state(|| 15u8);
     let sent = use_state(|| false);
     let on_grid_width_change = {
         let grid_width = grid_width.clone();

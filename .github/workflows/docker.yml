@@ -38,9 +38,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          
+
       - name: Install build deps
-        run: cargo install cargo-make trunk && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && rustup target add wasm32-unknown-unknown
+        run: cargo install cargo-make trunk && (curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh) && rustup target add wasm32-unknown-unknown
 
       - name: Build
         run: cargo make build
