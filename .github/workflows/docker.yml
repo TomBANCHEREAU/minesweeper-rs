@@ -30,6 +30,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
 
       - uses: actions/cache@v3
+        id: cache
         with:
           path: |
             ~/.cargo/bin/
@@ -40,6 +41,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install build deps
+        if: steps.cache.outputs.cache-hit != 'true'
         run: cargo install cargo-make trunk && (curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh) && rustup target add wasm32-unknown-unknown
 
       - name: Build
