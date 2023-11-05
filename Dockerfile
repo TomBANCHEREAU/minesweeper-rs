@@ -22,7 +22,7 @@ COPY server server
 WORKDIR /build/server
 RUN cargo build --release
 
-FROM alpine as Runner
+FROM debian:bookworm as Runner
 
 COPY --from=ClientBuilder /build/client/dist client/dist
 COPY --from=ClientBuilder /build/client/images client/images
@@ -31,4 +31,4 @@ COPY  --from=ServerBuilder /build/server/target/release/server server/server
 
 EXPOSE 9000
 
-CMD [ "server/server" ]
+CMD [ "/server/server" ]

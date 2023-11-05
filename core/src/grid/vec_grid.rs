@@ -56,12 +56,13 @@ impl Default for VecGrid<TileState> {
         Self { grid }
     }
 }
+
 #[cfg(feature = "server")]
 impl VecGrid<Tile> {
     pub fn new(width: u8, height: u8) -> Self {
-        let mut grid: Vec<Vec<Tile>> = Default::default();
+        let mut grid: Vec<Vec<Tile>> = Vec::with_capacity(height.into());
         for _y in 0..height {
-            let mut col = vec![];
+            let mut col = Vec::with_capacity(width.into());
             for _x in 0..width {
                 col.push(Tile {
                     content: TileContent::Empty,
@@ -70,21 +71,26 @@ impl VecGrid<Tile> {
             }
             grid.push(col);
         }
-        let mut grid = Self { grid };
+        Self { grid }
+    }
+    pub fn populate(&mut self, input_x: i32, input_y: i32) {
+        let height = self.grid.len();
+        let width = self.grid.get(0).map(|v| v.len()).unwrap_or(0);
         for (y, x) in (0..height)
             .flat_map(|y| (0..width).map(move |x| (y, x)))
+            .filter(|(y, x)| x.abs_diff(input_x as usize) > 2 || y.abs_diff(input_y as usize) > 2)
             .collect::<Vec<_>>()
             .partial_shuffle(
                 &mut ThreadRng::default(),
-                usize::from(u16::from(width) * u16::from(height) / 5u16),
+                usize::from(u16::from(width as u16) * u16::from(height as u16) / 5u16),
             )
             .0
         {
             for dy in -1..=1i16 {
                 for dx in -1..=1i16 {
-                    let Ok(x) = u8::try_from(dx + i16::from(*x)) else {continue;};
-                    let Ok(y) = u8::try_from(dy + i16::from(*y)) else {continue;};
-                    if let Some(Tile { content, state: _ }) = grid.get_mut(x, y) {
+                    let Ok(x) = u8::try_from(dx + i16::from(*x as u8)) else {continue;};
+                    let Ok(y) = u8::try_from(dy + i16::from(*y as u8)) else {continue;};
+                    if let Some(Tile { content, state: _ }) = self.get_mut(x, y) {
                         if dx == 0 && dy == 0 {
                             *content = TileContent::Bomb;
                         } else {
@@ -98,7 +104,6 @@ impl VecGrid<Tile> {
                 }
             }
         }
-        grid
     }
 }
 #[cfg(feature = "server")]

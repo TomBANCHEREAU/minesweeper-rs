@@ -32,6 +32,7 @@ use crate::{
 pub struct Game {
     grid: VecGrid<Tile>,
     listeners: Vec<Box<dyn Observer<GameEvent>>>,
+    populated: bool,
 }
 #[cfg(feature = "server")]
 impl Game {
@@ -39,6 +40,7 @@ impl Game {
         Self {
             grid,
             listeners: Default::default(),
+            populated: false,
         }
     }
     pub fn play(&mut self, play: GameInput) {
@@ -48,6 +50,10 @@ impl Game {
         } = play;
         match action {
             GameAction::Discover { x, y } => {
+                if (!self.populated) {
+                    self.populated = true;
+                    self.grid.populate(x, y);
+                }
                 self.discover_tile(x, y);
             }
             GameAction::PlaceFlag { x, y } => {
