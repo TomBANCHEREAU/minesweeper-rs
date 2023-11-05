@@ -31,6 +31,7 @@ serde_json = "1.0.96"
 serde = "1.0.171"
 yew-websocket = "1.0.1"
 futures-util = { version = "0.3.28", features = ["sink"] }
+bitcode = { version = "0.5.0", features = ["serde"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"

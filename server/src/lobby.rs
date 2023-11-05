@@ -28,7 +28,11 @@ impl Actor for WsActor {
 impl Handler<GenericServerMessageWrapper> for WsActor {
     type Result = ();
     fn handle(&mut self, item: GenericServerMessageWrapper, ctx: &mut Self::Context) {
+        #[cfg(debug_assertions)]
         ctx.text(serde_json::to_string(&item.0).unwrap());
+
+        #[cfg(not(debug_assertions))]
+        ctx.binary(bitcode::serialize(&item.0).unwrap());
     }
 }
 
@@ -36,12 +40,20 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, _: &mut Self::Context) {
         // let Ok(msg) = msg else { return };
         match msg.unwrap() {
-            ws::Message::Text(text) => self
-                .lobby
-                .lock()
-                .unwrap()
-                .handle_message(serde_json::from_str(text.to_string().as_str()).unwrap()),
-            ws::Message::Binary(_) => todo!(),
+            ws::Message::Text(text) => {
+                #[cfg(debug_assertions)]
+                self.lobby
+                    .lock()
+                    .unwrap()
+                    .handle_message(serde_json::from_str(text.to_string().as_str()).unwrap());
+            }
+            ws::Message::Binary(binary) => {
+                #[cfg(not(debug_assertions))]
+                self.lobby
+                    .lock()
+                    .unwrap()
+                    .handle_message(bitcode::deserialize(binary.as_ref()).unwrap());
+            }
             ws::Message::Continuation(_) => todo!(),
             ws::Message::Ping(_) => todo!(),
             ws::Message::Pong(_) => todo!(),

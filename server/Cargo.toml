@@ -22,3 +22,4 @@ actix = "0.13.0"
 core = { path = "../core", features=["server"] }
 model = { path = "../model" }
 nanoid = "0.4.0"
+bitcode = { version = "0.5.0", features = ["serde"] }
