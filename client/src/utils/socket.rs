@@ -28,8 +28,10 @@ impl<In: Serialize + 'static, Out: DeserializeOwned + 'static> Socket<In, Out> {
             );
             #[cfg(not(debug_assertions))]
             callback.emit(
-                bitcode::deserialize::<Out>(Uint8Array::new(&event.data()).to_vec().as_ref())
-                    .unwrap(),
+                bitcode::deserialize::<Out>(
+                    js_sys::Uint8Array::new(&event.data()).to_vec().as_ref(),
+                )
+                .unwrap(),
             );
         });
 
