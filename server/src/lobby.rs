@@ -2,7 +2,7 @@ use actix::{Actor, Addr, AsyncContext, Handler, Message, StreamHandler};
 use actix_web_actors::ws;
 // use actix_web_actors::ws;
 // use futures_util::{stream::SplitSink, SinkExt};
-use core::{
+use minesweeper_core::{
     game::{Game, GameEvent, GameInput},
     messages::{GenericClientMessage, GenericServerMessage},
     pubsub::{self, Subject},

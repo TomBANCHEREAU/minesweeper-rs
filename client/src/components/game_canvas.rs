@@ -16,6 +16,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement};
 use yew::{html, Component, Html, NodeRef, Properties};
 
 use crate::{
+    contexts::user::User,
     image::{draw_sprite, Sprite},
     utils::{
         mouse_event_handler::{handle_mouse_event, MouseButton, MouseEvent},
@@ -31,6 +32,7 @@ pub trait CanvasRenderer: PartialEq {
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub lobby: Rc<Lobby>,
+    pub user: User,
 }
 
 pub struct GameCanvas {
@@ -161,6 +163,7 @@ impl Component for GameCanvas {
         let onload = ctx.link().callback(|_| Message::RenderRequest);
         html! {
             <>
+                <p>{&ctx.props().user.username}</p>
                 <canvas
                     ref={self.canvas_node_ref.clone()}
                     onmousedown={onclick}

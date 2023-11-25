@@ -1,12 +1,14 @@
 use actix_files::NamedFile;
 use actix_web::{
     dev::{fn_service, ServiceRequest, ServiceResponse},
-    middleware::{self, Logger},
-    web::{self, scope},
-    App, HttpRequest, HttpServer,
+    middleware::{Logger, NormalizePath, TrailingSlash},
+    web::scope,
+    App, HttpServer,
 };
+use middleware::auth::Authenticate;
 mod api;
 mod lobby;
+mod middleware;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -14,10 +16,9 @@ async fn main() -> Result<(), std::io::Error> {
     let api_config = api::ApiConfig::default();
     HttpServer::new(move || {
         App::new()
-            .wrap(middleware::NormalizePath::new(
-                middleware::TrailingSlash::Trim,
-            ))
+            .wrap(NormalizePath::new(TrailingSlash::Trim))
             .wrap(Logger::new("%r %s %T"))
+            .wrap(Authenticate)
             .service(scope("/api").configure(api_config.configure()))
             .service(actix_files::Files::new("/images", "../client/images"))
             .service(

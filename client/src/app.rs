@@ -1,4 +1,7 @@
-use crate::pages::{lobby_id::PageLobbyId, lobby_new::PageLobbyNew};
+use crate::{
+    contexts::user::UserContext,
+    pages::{lobby_id::PageLobbyId, lobby_new::PageLobbyNew},
+};
 use yew::{function_component, html, Html};
 use yew_router::{BrowserRouter, Routable, Switch};
 
@@ -21,10 +24,12 @@ pub enum Route {
 #[function_component]
 pub fn App() -> Html {
     html! {
-        <BrowserRouter>
-            <main>
-                <Switch<Route> render={switch} />
-            </main>
-        </BrowserRouter>
+        <UserContext>
+            <BrowserRouter>
+                <main>
+                    <Switch<Route> render={switch} />
+                </main>
+            </BrowserRouter>
+        </UserContext>
     }
 }

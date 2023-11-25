@@ -1,4 +1,4 @@
-use core::{game::Game, grid::vec_grid::VecGrid, tile::Tile};
+use minesweeper_core::{game::Game, grid::vec_grid::VecGrid, tile::Tile};
 use std::sync::{Arc, Mutex};
 
 use actix_web::{get, post, web, Error, HttpRequest, HttpResponse, Responder};

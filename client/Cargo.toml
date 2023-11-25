@@ -14,8 +14,8 @@ default = ["console_error_panic_hook"]
 model = { path = "../model" }
 core = { path = "../core", features=[] }
 
-yew = { version = "0.20.0", features = ["csr"] }
-yew-router = "0.17.0"
+yew = { version = "0.21.0", features = ["csr"] }
+yew-router = "0.18.0"
 
 wasm-bindgen = "0.2.63"
 wasm-bindgen-futures = "0.4.37"
@@ -32,6 +32,8 @@ serde = "1.0.171"
 yew-websocket = "1.0.1"
 futures-util = { version = "0.3.28", features = ["sink"] }
 bitcode = { version = "0.5.0", features = ["serde"] }
+wasm-cookies = "0.2.1"
+jwt = "0.16.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
