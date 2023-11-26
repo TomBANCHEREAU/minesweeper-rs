@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::mem::swap;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::spawn;
+use std::vec;
 
 use serde::{Deserialize, Serialize};
 
@@ -30,31 +32,30 @@ use crate::tile::{Tile, TileContent, TileState};
 #[cfg(feature = "server")]
 pub struct Game {
     grid: VecGrid<Tile>,
-    sender: Sender<GameEvent>,
-    receiver: Receiver<GameInput>,
     populated: bool,
     cursors: HashMap<String, CursorPosition>,
+    events: Vec<GameEvent>,
 }
 #[cfg(feature = "server")]
 impl Game {
-    pub fn new(
-        grid: VecGrid<Tile>,
-        sender: Sender<GameEvent>,
-        receiver: Receiver<GameInput>,
-    ) -> Self {
+    pub fn new(grid: VecGrid<Tile>) -> Self {
         Self {
             grid,
-            sender,
-            receiver,
             populated: false,
             cursors: HashMap::new(),
+            events: vec![],
         }
     }
-    pub fn start(mut self) {
-        spawn(move || loop {
-            let input = self.receiver.recv().unwrap();
-            self.play(input)
-        });
+    pub fn get_start_event(&self) -> GameEvent {
+        GameEvent::GameStart {
+            grid: VecGrid::<TileState>::from(&self.grid),
+            cursors: self.cursors.clone(),
+        }
+    }
+    pub fn buffered_events(&mut self) -> Vec<GameEvent> {
+        let mut events: Vec<GameEvent> = vec![];
+        swap(&mut self.events, &mut events);
+        return events;
     }
     pub fn play(&mut self, play: GameInput) {
         let GameInput { action, username } = play;
@@ -96,10 +97,6 @@ impl Game {
                     }
                 }
             }
-            GameAction::RedrawRequest => self.emit_event(GameEvent::GameStart {
-                grid: VecGrid::<TileState>::from(&self.grid),
-                cursors: self.cursors.clone(),
-            }),
             GameAction::CursorMoved(cursor_position) => {
                 self.cursors.insert(username.clone(), cursor_position);
                 self.emit_event(GameEvent::CursorMoved(username, cursor_position));
@@ -107,10 +104,7 @@ impl Game {
         }
     }
     fn emit_event(&mut self, event: GameEvent) {
-        self.sender.send(event).unwrap();
-        // self.listeners
-        //     .iter_mut()
-        //     .for_each(|listener| listener.notify(event.clone()));
+        self.events.push(event);
     }
     fn discover_tile(&mut self, x: i32, y: i32) {
         let Some(tile) = self.grid.get_mut(x, y) else { return };
@@ -152,7 +146,6 @@ pub enum GameAction {
     Discover { x: i32, y: i32 },
     PlaceFlag { x: i32, y: i32 },
     RemoveFlag { x: i32, y: i32 },
-    RedrawRequest,
     CursorMoved(CursorPosition),
 }
 

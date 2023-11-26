@@ -53,7 +53,7 @@ impl From<&TileState> for Sprite {
                 TileContent::Number(7) => Sprite::Seven,
                 TileContent::Number(8) => Sprite::Eight,
                 TileContent::Bomb => Sprite::Bomb,
-                TileContent::Number(_) => todo!(),
+                TileContent::Number(_) => panic!(),
             },
         }
     }

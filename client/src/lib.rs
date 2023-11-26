@@ -3,5 +3,4 @@ pub mod components;
 pub mod contexts;
 pub mod image;
 pub mod pages;
-pub mod renderer;
 pub mod utils;

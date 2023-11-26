@@ -1,12 +1,9 @@
-use minesweeper_core::{game::Game, grid::vec_grid::VecGrid, tile::Tile};
-use std::sync::{Arc, Mutex};
-
 use actix_web::{get, post, web, Error, HttpMessage, HttpRequest, HttpResponse, Responder};
 use actix_web_actors::ws;
 use nanoid::nanoid;
 
 use crate::{
-    lobby::{Lobbies, Lobby, WsActor},
+    lobby::{facade::LobbyFacade, Lobbies},
     middleware::auth::User,
 };
 
@@ -22,10 +19,7 @@ pub async fn create(
     body: web::Json<model::CreateLobbyBody>,
 ) -> impl Responder {
     let id = nanoid!();
-    let new_lobby = Arc::new(Mutex::new(Lobby::new(VecGrid::<Tile>::new(
-        body.grid_width,
-        body.grid_height,
-    ))));
+    let new_lobby = LobbyFacade::new(body.into_inner());
     lobbies.lock().unwrap().insert(id.clone(), new_lobby);
     web::Json(model::Lobby { id })
 }
@@ -51,12 +45,5 @@ pub async fn lobby_ws(
     let lobbies = lobbies.lock().unwrap();
     let Some(lobby) = lobbies.get(lobby_id.as_str()) else {return Ok(HttpResponse::BadRequest().finish())};
     let user: User = req.extensions().get::<User>().unwrap().clone();
-    return ws::start(
-        WsActor {
-            user,
-            lobby: Arc::clone(lobby),
-        },
-        &req,
-        stream,
-    );
+    return ws::start(lobby.create_handle(user), &req, stream);
 }
