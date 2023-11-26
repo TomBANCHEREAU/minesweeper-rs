@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread::spawn;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,28 +22,36 @@ use crate::grid::Grid;
 //     }
 // }
 use crate::grid::{vec_grid::VecGrid, NEIGHBORS};
-use crate::{
-    pubsub::{Observer, Subject},
-    tile::{Tile, TileContent, TileState},
-};
+use crate::tile::{Tile, TileContent, TileState};
 
 // pub trait GameObserver: Observer<GameEvent> {}
 
 #[cfg(feature = "server")]
-#[derive(Default)]
 pub struct Game {
     grid: VecGrid<Tile>,
-    listeners: Vec<Box<dyn Observer<GameEvent>>>,
+    sender: Sender<GameEvent>,
+    receiver: Receiver<GameInput>,
     populated: bool,
 }
 #[cfg(feature = "server")]
 impl Game {
-    pub fn new(grid: VecGrid<Tile>) -> Self {
+    pub fn new(
+        grid: VecGrid<Tile>,
+        sender: Sender<GameEvent>,
+        receiver: Receiver<GameInput>,
+    ) -> Self {
         Self {
             grid,
-            listeners: Default::default(),
+            sender,
+            receiver,
             populated: false,
         }
+    }
+    pub fn start(mut self) {
+        spawn(move || loop {
+            let input = self.receiver.recv().unwrap();
+            self.play(input)
+        });
     }
     pub fn play(&mut self, play: GameInput) {
         let GameInput {
@@ -50,7 +60,7 @@ impl Game {
         } = play;
         match action {
             GameAction::Discover { x, y } => {
-                if (!self.populated) {
+                if !self.populated {
                     self.populated = true;
                     self.grid.populate(x, y);
                 }
@@ -86,12 +96,16 @@ impl Game {
                     }
                 }
             }
+            GameAction::RedrawRequest => self.emit_event(GameEvent::GameStart {
+                grid: VecGrid::<TileState>::from(&self.grid),
+            }),
         }
     }
     fn emit_event(&mut self, event: GameEvent) {
-        self.listeners
-            .iter_mut()
-            .for_each(|listener| listener.notify(event.clone()));
+        self.sender.send(event).unwrap();
+        // self.listeners
+        //     .iter_mut()
+        //     .for_each(|listener| listener.notify(event.clone()));
     }
     fn discover_tile(&mut self, x: i32, y: i32) {
         let Some(tile) = self.grid.get_mut(x, y) else { return };
@@ -133,6 +147,7 @@ pub enum GameAction {
     Discover { x: i32, y: i32 },
     PlaceFlag { x: i32, y: i32 },
     RemoveFlag { x: i32, y: i32 },
+    RedrawRequest,
 }
 
 /**
@@ -145,21 +160,4 @@ pub enum GameEvent {
     GameStart { grid: VecGrid<TileState> },
     TileStateUpdate { x: i32, y: i32, state: TileState },
     GameOver {},
-}
-
-/**
- * Trait iml
- */
-#[cfg(feature = "server")]
-impl Subject<GameEvent> for Game {
-    fn subscribe(&mut self, mut observer: impl Observer<GameEvent> + 'static) {
-        observer.notify(GameEvent::GameStart {
-            grid: VecGrid::<TileState>::from(&self.grid),
-        });
-        self.listeners.push(Box::new(observer));
-    }
-
-    // fn unsubscribe(&mut self, observer: impl Observer<GameEvent> + 'static) {
-    //     todo!()
-    // }
 }

@@ -4,12 +4,17 @@ use actix_web_actors::ws;
 // use futures_util::{stream::SplitSink, SinkExt};
 use minesweeper_core::{
     game::{Game, GameEvent, GameInput},
+    grid::vec_grid::VecGrid,
     messages::{GenericClientMessage, GenericServerMessage},
-    pubsub::{self, Subject},
+    tile::Tile,
 };
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        mpsc::{channel, sync_channel, Receiver, Sender, SyncSender},
+        Arc, Mutex,
+    },
+    thread::spawn,
 };
 // use tokio::{net::TcpStream, sync::Mutex};
 // use tokio_tungstenite::WebSocketStream;
@@ -70,33 +75,63 @@ pub struct GenericServerMessageWrapper(pub GenericServerMessage);
 pub type Lobbies = Mutex<HashMap<String, Arc<Mutex<Lobby>>>>;
 // type Sender = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
 
-#[derive(Default)]
 pub struct Lobby {
-    game: Game,
+    sender: Sender<GameInput>,
+    listenners: Arc<Mutex<Vec<Addr<WsActor>>>>,
 }
-struct Observer {
-    sender: Addr<WsActor>,
-}
-impl pubsub::Observer<GameEvent> for Observer {
-    fn notify(&mut self, event: GameEvent) {
-        tokio::spawn(self.sender.send(GenericServerMessageWrapper(
-            GenericServerMessage::GameEvent(event),
-        )));
+async fn forward_event_to_listeners(
+    mut event_receiver: Receiver<GameEvent>,
+    listenners: Arc<Mutex<Vec<Addr<WsActor>>>>,
+) {
+    loop {
+        let event =
+            tokio::task::spawn_blocking(|| (event_receiver.recv().unwrap(), event_receiver))
+                .await
+                .unwrap();
+        event_receiver = event.1;
+        let event = event.0;
+        let len = listenners.lock().unwrap().len();
+        for listenner in 0..len {
+            let cloned = listenners.lock().unwrap().get(listenner).unwrap().clone();
+            cloned
+                .send(GenericServerMessageWrapper(
+                    GenericServerMessage::GameEvent(event.clone()),
+                ))
+                .await
+                .unwrap();
+        }
     }
 }
 impl Lobby {
-    pub fn new(game: Game) -> Self {
-        Self { game }
+    pub fn new(grid: VecGrid<Tile>) -> Self {
+        let (event_sender, event_receiver) = channel();
+        let (input_sender, input_receiver) = channel();
+        Game::new(grid, event_sender, input_receiver).start();
+        let this = Self {
+            sender: input_sender,
+            listenners: Default::default(),
+        };
+        let listenners = this.listenners.clone();
+        tokio::spawn(forward_event_to_listeners(event_receiver, listenners));
+        return this;
     }
     pub fn join(&mut self, sender: Addr<WsActor>) {
-        self.game.subscribe(Observer { sender })
+        self.listenners.lock().unwrap().push(sender);
+        self.sender
+            .send(GameInput {
+                action: minesweeper_core::game::GameAction::RedrawRequest,
+            })
+            .unwrap();
     }
     pub fn handle_message(&mut self, message: GenericClientMessage) {
         dbg!(&message);
         match message {
-            GenericClientMessage::GameAction(game_action) => self.game.play(GameInput {
-                action: game_action,
-            }),
+            GenericClientMessage::GameAction(game_action) => self
+                .sender
+                .send(GameInput {
+                    action: game_action,
+                })
+                .unwrap(),
         }
     }
 }

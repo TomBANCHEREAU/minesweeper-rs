@@ -19,10 +19,10 @@ pub async fn create(
     body: web::Json<model::CreateLobbyBody>,
 ) -> impl Responder {
     let id = nanoid!();
-    let new_lobby = Arc::new(Mutex::new(Lobby::new(Game::new(VecGrid::<Tile>::new(
+    let new_lobby = Arc::new(Mutex::new(Lobby::new(VecGrid::<Tile>::new(
         body.grid_width,
         body.grid_height,
-    )))));
+    ))));
     lobbies.lock().unwrap().insert(id.clone(), new_lobby);
     web::Json(model::Lobby { id })
 }
