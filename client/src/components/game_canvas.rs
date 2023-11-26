@@ -34,7 +34,11 @@ pub struct Props {
     pub lobby: Rc<Lobby>,
     pub user: User,
 }
-
+#[derive(Debug, PartialEq)]
+pub struct CursorPosition {
+    pub x: i32,
+    pub y: i32,
+}
 pub struct GameCanvas {
     canvas_node_ref: NodeRef,
     canvas_element: Option<HtmlCanvasElement>,
@@ -47,6 +51,7 @@ pub struct GameCanvas {
 
     socket: Socket<GenericClientMessage, GenericServerMessage>,
     grid: VecGrid<TileState>,
+    cursor_position: CursorPosition,
 }
 
 #[derive(Debug)]
@@ -54,6 +59,7 @@ pub enum Message {
     RenderRequest,
     Render,
     Click(MouseEvent),
+    MouseMove(CursorPosition),
     SocketMessage(GenericServerMessage),
     SendMessage(GameAction),
 }
@@ -78,6 +84,7 @@ impl Component for GameCanvas {
             animation_frame_handle: None,
             socket,
             grid: VecGrid::empty(),
+            cursor_position: CursorPosition { x: 0, y: 0 },
         }
     }
 
@@ -111,6 +118,15 @@ impl Component for GameCanvas {
                             );
                         }
                     }
+                    draw_sprite(
+                        image_element,
+                        context,
+                        Sprite::Player,
+                        f64::from(self.cursor_position.x) * 16.,
+                        f64::from(self.cursor_position.y) * 16.,
+                        16.,
+                        16.,
+                    )
                 }
             }
             Message::Click(event) => {
@@ -139,6 +155,12 @@ impl Component for GameCanvas {
             Message::SendMessage(msg) => {
                 self.socket.send(GenericClientMessage::GameAction(msg));
             }
+            Message::MouseMove(cursor_position) => {
+                if cursor_position != self.cursor_position {
+                    self.cursor_position = cursor_position;
+                    ctx.link().send_message(Message::RenderRequest)
+                }
+            }
         };
         false
     }
@@ -160,12 +182,19 @@ impl Component for GameCanvas {
                 button,
             }));
         });
+        let onmove = ctx.link().callback(|event: web_sys::MouseEvent| {
+            Message::MouseMove(CursorPosition {
+                x: event.offset_x().div_euclid(16),
+                y: event.offset_y().div_euclid(16),
+            })
+        });
         let onload = ctx.link().callback(|_| Message::RenderRequest);
         html! {
             <>
                 <p>{&ctx.props().user.username}</p>
                 <canvas
                     ref={self.canvas_node_ref.clone()}
+                    onmousemove={onmove}
                     onmousedown={onclick}
                     oncontextmenu={|event: web_sys::MouseEvent| event.prevent_default()}
                 />

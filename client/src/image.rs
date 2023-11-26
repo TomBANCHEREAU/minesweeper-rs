@@ -14,6 +14,7 @@ pub enum Sprite {
     Eight,
     Flag,
     Covered,
+    Player,
 }
 
 impl From<Sprite> for (f64, f64, f64, f64) {
@@ -31,6 +32,7 @@ impl From<Sprite> for (f64, f64, f64, f64) {
             Sprite::Eight => (128., 23., 16., 16.),
             Sprite::Flag => (16., 39., 16., 16.),
             Sprite::Covered => (0., 39., 16., 16.),
+            Sprite::Player => (112., 39., 16., 16.),
         }
     }
 }
