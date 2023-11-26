@@ -2,7 +2,7 @@ use actix_web::{
     body::EitherBody,
     cookie::Cookie,
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpResponse,
+    Error, HttpMessage, HttpResponse,
 };
 use futures_util::future::LocalBoxFuture;
 use hmac::{Hmac, Mac};
@@ -35,6 +35,7 @@ where
 pub struct AuthenticateMiddleware<S> {
     service: S,
 }
+#[derive(Debug, Clone)]
 pub struct User {
     pub username: String,
     need_refresh: bool,
@@ -73,17 +74,23 @@ where
                 })
             }
         };
+        let cookie = if user.need_refresh {
+            let mut claims = BTreeMap::new();
+            claims.insert("username", user.username.clone());
+            let token_str = claims.sign_with_key(&key).unwrap();
+            let mut cookie = Cookie::new("token", token_str);
+            cookie.set_path("/");
+            Some(cookie)
+        } else {
+            None
+        };
+        request.extensions_mut().insert::<User>(user);
 
         let res = self.service.call(request);
         Box::pin(async move {
             res.await
                 .map(|mut res| {
-                    if user.need_refresh {
-                        let mut claims = BTreeMap::new();
-                        claims.insert("username", user.username);
-                        let token_str = claims.sign_with_key(&key).unwrap();
-                        let mut cookie = Cookie::new("token", token_str);
-                        cookie.set_path("/");
+                    if let Some(cookie) = cookie {
                         res.response_mut().add_cookie(&cookie).unwrap();
                     }
                     return res;

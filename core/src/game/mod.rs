@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::spawn;
@@ -32,6 +33,7 @@ pub struct Game {
     sender: Sender<GameEvent>,
     receiver: Receiver<GameInput>,
     populated: bool,
+    cursors: HashMap<String, CursorPosition>,
 }
 #[cfg(feature = "server")]
 impl Game {
@@ -45,6 +47,7 @@ impl Game {
             sender,
             receiver,
             populated: false,
+            cursors: HashMap::new(),
         }
     }
     pub fn start(mut self) {
@@ -54,10 +57,7 @@ impl Game {
         });
     }
     pub fn play(&mut self, play: GameInput) {
-        let GameInput {
-            action,
-            // player: player,
-        } = play;
+        let GameInput { action, username } = play;
         match action {
             GameAction::Discover { x, y } => {
                 if !self.populated {
@@ -98,7 +98,12 @@ impl Game {
             }
             GameAction::RedrawRequest => self.emit_event(GameEvent::GameStart {
                 grid: VecGrid::<TileState>::from(&self.grid),
+                cursors: self.cursors.clone(),
             }),
+            GameAction::CursorMoved(cursor_position) => {
+                self.cursors.insert(username.clone(), cursor_position);
+                self.emit_event(GameEvent::CursorMoved(username, cursor_position));
+            }
         }
     }
     fn emit_event(&mut self, event: GameEvent) {
@@ -131,9 +136,9 @@ impl Game {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct GameInput {
-    // player: Player,
+    pub username: String,
     pub action: GameAction,
 }
 /**
@@ -148,6 +153,7 @@ pub enum GameAction {
     PlaceFlag { x: i32, y: i32 },
     RemoveFlag { x: i32, y: i32 },
     RedrawRequest,
+    CursorMoved(CursorPosition),
 }
 
 /**
@@ -157,7 +163,21 @@ pub enum GameAction {
  */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum GameEvent {
-    GameStart { grid: VecGrid<TileState> },
-    TileStateUpdate { x: i32, y: i32, state: TileState },
+    GameStart {
+        grid: VecGrid<TileState>,
+        cursors: HashMap<String, CursorPosition>,
+    },
+    TileStateUpdate {
+        x: i32,
+        y: i32,
+        state: TileState,
+    },
     GameOver {},
+    CursorMoved(String, CursorPosition),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
+pub struct CursorPosition {
+    pub x: i32,
+    pub y: i32,
 }

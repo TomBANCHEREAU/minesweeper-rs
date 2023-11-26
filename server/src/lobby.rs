@@ -11,22 +11,24 @@ use minesweeper_core::{
 use std::{
     collections::HashMap,
     sync::{
-        mpsc::{channel, sync_channel, Receiver, Sender, SyncSender},
+        mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
-    thread::spawn,
 };
+
+use crate::middleware::auth::User;
 // use tokio::{net::TcpStream, sync::Mutex};
 // use tokio_tungstenite::WebSocketStream;
 // use tungstenite::Message;
 pub struct WsActor {
+    pub user: User,
     pub lobby: Arc<Mutex<Lobby>>,
 }
 
 impl Actor for WsActor {
     type Context = ws::WebsocketContext<Self>;
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.lobby.lock().unwrap().join(ctx.address());
+        self.lobby.lock().unwrap().join(ctx.address(), &self.user);
     }
 }
 
@@ -42,22 +44,22 @@ impl Handler<GenericServerMessageWrapper> for WsActor {
 }
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, _: &mut Self::Context) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         // let Ok(msg) = msg else { return };
         match msg.unwrap() {
             ws::Message::Text(text) => {
                 #[cfg(debug_assertions)]
-                self.lobby
-                    .lock()
-                    .unwrap()
-                    .handle_message(serde_json::from_str(text.to_string().as_str()).unwrap());
+                self.lobby.lock().unwrap().handle_message(
+                    serde_json::from_str(text.to_string().as_str()).unwrap(),
+                    &self.user,
+                );
             }
             ws::Message::Binary(binary) => {
                 #[cfg(not(debug_assertions))]
                 self.lobby
                     .lock()
                     .unwrap()
-                    .handle_message(bitcode::deserialize(binary.as_ref()).unwrap());
+                    .handle_message(bitcode::deserialize(binary.as_ref()).unwrap(), &self.user);
             }
             ws::Message::Continuation(_) => todo!(),
             ws::Message::Ping(_) => todo!(),
@@ -115,20 +117,21 @@ impl Lobby {
         tokio::spawn(forward_event_to_listeners(event_receiver, listenners));
         return this;
     }
-    pub fn join(&mut self, sender: Addr<WsActor>) {
-        self.listenners.lock().unwrap().push(sender);
+    pub fn join(&mut self, sender: Addr<WsActor>, user: &User) {
         self.sender
             .send(GameInput {
+                username: user.username.clone(),
                 action: minesweeper_core::game::GameAction::RedrawRequest,
             })
             .unwrap();
+        self.listenners.lock().unwrap().push(sender);
     }
-    pub fn handle_message(&mut self, message: GenericClientMessage) {
-        dbg!(&message);
+    pub fn handle_message(&mut self, message: GenericClientMessage, user: &User) {
         match message {
             GenericClientMessage::GameAction(game_action) => self
                 .sender
                 .send(GameInput {
+                    username: user.username.clone(),
                     action: game_action,
                 })
                 .unwrap(),

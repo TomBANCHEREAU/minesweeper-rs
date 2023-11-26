@@ -1,10 +1,10 @@
 use core::{
-    game::{GameAction, GameEvent},
+    game::{CursorPosition, GameAction, GameEvent},
     grid::{vec_grid::VecGrid, Grid},
     messages::{GenericClientMessage, GenericServerMessage},
     tile::TileState,
 };
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use gloo::{
     console::log,
@@ -34,11 +34,7 @@ pub struct Props {
     pub lobby: Rc<Lobby>,
     pub user: User,
 }
-#[derive(Debug, PartialEq)]
-pub struct CursorPosition {
-    pub x: i32,
-    pub y: i32,
-}
+
 pub struct GameCanvas {
     canvas_node_ref: NodeRef,
     canvas_element: Option<HtmlCanvasElement>,
@@ -52,6 +48,7 @@ pub struct GameCanvas {
     socket: Socket<GenericClientMessage, GenericServerMessage>,
     grid: VecGrid<TileState>,
     cursor_position: CursorPosition,
+    cursor_positions: HashMap<String, CursorPosition>,
 }
 
 #[derive(Debug)]
@@ -85,6 +82,7 @@ impl Component for GameCanvas {
             socket,
             grid: VecGrid::empty(),
             cursor_position: CursorPosition { x: 0, y: 0 },
+            cursor_positions: HashMap::new(),
         }
     }
 
@@ -118,6 +116,17 @@ impl Component for GameCanvas {
                             );
                         }
                     }
+                    for (_username, cursor) in &self.cursor_positions {
+                        draw_sprite(
+                            image_element,
+                            context,
+                            Sprite::Player,
+                            f64::from(cursor.x) * 16.,
+                            f64::from(cursor.y) * 16.,
+                            16.,
+                            16.,
+                        )
+                    }
                     draw_sprite(
                         image_element,
                         context,
@@ -140,12 +149,16 @@ impl Component for GameCanvas {
                             ctx.link().send_message(Message::RenderRequest)
                         }
                         GameEvent::GameOver {} => (),
-                        GameEvent::GameStart { grid } => {
+                        GameEvent::GameStart { grid, cursors } => {
                             self.grid = grid;
+                            self.cursor_positions = cursors;
                             if let Some(canvas_element) = &self.canvas_element {
                                 canvas_element.set_height(self.grid.grid.len() as u32 * 16);
                                 canvas_element.set_width(self.grid.grid[0].len() as u32 * 16);
                             }
+                        }
+                        GameEvent::CursorMoved(username, position) => {
+                            self.cursor_positions.insert(username, position);
                             ctx.link().send_message(Message::RenderRequest)
                         }
                     },
@@ -158,6 +171,10 @@ impl Component for GameCanvas {
             Message::MouseMove(cursor_position) => {
                 if cursor_position != self.cursor_position {
                     self.cursor_position = cursor_position;
+                    ctx.link()
+                        .send_message(Message::SendMessage(GameAction::CursorMoved(
+                            cursor_position,
+                        )));
                     ctx.link().send_message(Message::RenderRequest)
                 }
             }

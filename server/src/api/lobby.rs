@@ -1,11 +1,14 @@
 use minesweeper_core::{game::Game, grid::vec_grid::VecGrid, tile::Tile};
 use std::sync::{Arc, Mutex};
 
-use actix_web::{get, post, web, Error, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, web, Error, HttpMessage, HttpRequest, HttpResponse, Responder};
 use actix_web_actors::ws;
 use nanoid::nanoid;
 
-use crate::lobby::{Lobbies, Lobby, WsActor};
+use crate::{
+    lobby::{Lobbies, Lobby, WsActor},
+    middleware::auth::User,
+};
 
 #[get("")]
 pub async fn get_index(lobbies: web::Data<Lobbies>) -> actix_web::Result<impl Responder> {
@@ -47,8 +50,10 @@ pub async fn lobby_ws(
 ) -> Result<HttpResponse, Error> {
     let lobbies = lobbies.lock().unwrap();
     let Some(lobby) = lobbies.get(lobby_id.as_str()) else {return Ok(HttpResponse::BadRequest().finish())};
+    let user: User = req.extensions().get::<User>().unwrap().clone();
     return ws::start(
         WsActor {
+            user,
             lobby: Arc::clone(lobby),
         },
         &req,
