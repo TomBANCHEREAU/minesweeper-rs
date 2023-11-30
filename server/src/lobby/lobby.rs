@@ -37,11 +37,11 @@ pub fn lobby(receiver: Receiver<LobbyMessage>, create_lobby_body: model::CreateL
                     action,
                 });
                 for event in game.buffered_events() {
-                    for listenner in &listenners {
+                    listenners.retain(|listenner| {
                         listenner
                             .send(GenericServerMessage::GameEvent(event.clone()))
-                            .unwrap();
-                    }
+                            .is_ok()
+                    });
                 }
             }
         }

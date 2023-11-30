@@ -17,10 +17,12 @@ impl Actor for LobbyHandle {
                 .await
                 .unwrap();
                 lobby_event_receiver = task.1;
-                address
+                if let Err(_) = address
                     .send(GenericServerMessageWrapper(task.0.unwrap()))
                     .await
-                    .unwrap();
+                {
+                    return;
+                }
             }
         });
     }
