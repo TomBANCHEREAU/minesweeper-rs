@@ -1,34 +1,33 @@
-FROM rust:bookworm as ClientBuilder
+FROM rust:1 AS chef
+RUN cargo install cargo-chef
+WORKDIR /app
 
-RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-RUN cargo install trunk
-RUN rustup target add wasm32-unknown-unknown
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-WORKDIR /build
-COPY core core
-COPY model model
-COPY client client
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
 
-WORKDIR /build/client
-RUN trunk build --release
+# Install `dx`
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall dioxus-cli --root /.cargo -y --force
+ENV PATH="/.cargo/bin:$PATH"
 
-FROM rust:bookworm as ServerBuilder
+# Create the final bundle folder. Bundle always executes in release mode with optimizations enabled
+RUN dx bundle --package web --release
 
-WORKDIR /build
-COPY core core
-COPY model model
-COPY server server
+FROM chef AS runtime
+COPY --from=builder /app/target/dx/web/release/web/ /usr/local/app
 
-WORKDIR /build/server
-RUN cargo build --release
+# set our port and make sure to listen for all connections
+ENV PORT=8080
+ENV IP=0.0.0.0
 
-FROM debian:bookworm as Runner
+# expose the port 8080
+EXPOSE 8080
 
-COPY --from=ClientBuilder /build/client/dist client/dist
-COPY --from=ClientBuilder /build/client/images client/images
-
-COPY  --from=ServerBuilder /build/server/target/release/server server/server
-
-EXPOSE 9000
-
-CMD [ "/server/server" ]
+WORKDIR /usr/local/app
+ENTRYPOINT [ "/usr/local/app/web" ]

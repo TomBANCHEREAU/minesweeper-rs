@@ -1,7 +1,0 @@
-[tasks.workspace-dev]
-command="cargo"
-args=["watch", "-x", "run"]
-
-[tasks.build]
-command="cargo"
-args=["build", "--release"]
