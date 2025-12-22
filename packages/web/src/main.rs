@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use ui::Navbar;
 use views::{Blog, Home};
 
+mod components;
 mod views;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -19,7 +20,9 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 fn main() {
-    dioxus::launch(App);
+    dioxus::LaunchBuilder::new()
+        .with_context(server_only!(api::contexts::MinesweeperContext::default()))
+        .launch(App);
 }
 
 #[component]
@@ -27,11 +30,10 @@ fn App() -> Element {
     // Build cool things ✌️
 
     rsx! {
-        // Global app resources
-        document::Link { rel: "icon", href: FAVICON }
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
-
-        Router::<Route> {}
+      // Global app resources
+      document::Link { rel: "icon", href: FAVICON }
+      document::Link { rel: "stylesheet", href: MAIN_CSS }
+      Router::<Route> {}
     }
 }
 
@@ -40,17 +42,11 @@ fn App() -> Element {
 #[component]
 fn WebNavbar() -> Element {
     rsx! {
-        Navbar {
-            Link {
-                to: Route::Home {},
-                "Home"
-            }
-            Link {
-                to: Route::Blog { id: 1 },
-                "Blog"
-            }
-        }
-
-        Outlet::<Route> {}
+      Navbar {
+        Link { to: Route::Home {}, "Home" }
+        Link { to: Route::Blog { id: 1 }, "Blog" }
+      }
+      crate::components::tile::tile {}
+      Outlet::<Route> {}
     }
 }
