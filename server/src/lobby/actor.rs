@@ -31,11 +31,7 @@ impl Actor for LobbyHandle {
 impl Handler<GenericServerMessageWrapper> for LobbyHandle {
     type Result = ();
     fn handle(&mut self, item: GenericServerMessageWrapper, ctx: &mut Self::Context) {
-        #[cfg(debug_assertions)]
         ctx.text(serde_json::to_string(&item.0).unwrap());
-
-        #[cfg(not(debug_assertions))]
-        ctx.binary(bitcode::serialize(&item.0).unwrap());
     }
 }
 
@@ -43,12 +39,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for LobbyHandle {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, _: &mut Self::Context) {
         // let Ok(msg) = msg else { return };
         if let Some(client_message) = match msg.unwrap() {
-            #[cfg(debug_assertions)]
             ws::Message::Text(text) => {
                 Some(serde_json::from_str(text.to_string().as_str()).unwrap())
             }
-            #[cfg(not(debug_assertions))]
-            ws::Message::Binary(binary) => Some(bitcode::deserialize(binary.as_ref()).unwrap()),
             _ => Option::<GenericClientMessage>::None,
         } {
             self.lobby_message_sender

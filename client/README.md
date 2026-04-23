@@ -1,11 +1,15 @@
+# `create-preact`
 
+<h2 align="center">
+  <img height="256" width="256" src="./src/assets/preact.svg">
+</h2>
 
-## dev
-cargo install cargo-watch
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-cargo install http-server
+<h3 align="center">Get started using Preact and Vite!</h3>
 
-```
-cargo watch -c -s "cargo build && wasm-pack build --target web && http-server"
-```
+## Getting Started
 
+-   `npm run dev` - Starts a dev server at http://localhost:5173/
+
+-   `npm run build` - Builds for production, emitting to `dist/`
+
+-   `npm run preview` - Starts a server at http://localhost:4173/ to test production build locally

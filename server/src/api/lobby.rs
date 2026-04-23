@@ -43,7 +43,9 @@ pub async fn lobby_ws(
     stream: web::Payload,
 ) -> Result<HttpResponse, Error> {
     let lobbies = lobbies.lock().unwrap();
-    let Some(lobby) = lobbies.get(lobby_id.as_str()) else {return Ok(HttpResponse::BadRequest().finish())};
+    let Some(lobby) = lobbies.get(lobby_id.as_str()) else {
+        return Ok(HttpResponse::BadRequest().finish());
+    };
     let user: User = req.extensions().get::<User>().unwrap().clone();
-    return ws::start(lobby.create_handle(user), &req, stream);
+    return ws::WsResponseBuilder::new(lobby.create_handle(user), &req, stream).start();
 }

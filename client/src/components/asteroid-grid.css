@@ -1,0 +1,37 @@
+.asteroid-grid {
+  justify-items: center;
+  flex-grow: 1;
+  align-content: center;
+  background-color: darkslategrey;
+}
+
+.asteroid-grid * {
+  /* white-space: nowrap; */
+  height: 2em;
+  padding: 0;
+}
+.asteroid-grid button {
+  height: 2em;
+  width: 2em;
+  font-size: inherit;
+  background: none;
+  border: rgba(255, 196, 0, 0.6) dotted 0.01px;
+}
+
+/* .asteroid-grid button:hover {
+  background: cyan;
+  opacity: 0.1;
+}
+
+.asteroid-grid button.Empty {
+  border-color: rgba(0, 255, 0, 0.6);
+}
+
+.asteroid-grid button.Untouched {
+  cursor: pointer;
+  border-color: rgba(255, 0, 0, 0.6);
+} */
+
+/* .asteroid-grid button.\31::before {
+  content: "1";
+} */

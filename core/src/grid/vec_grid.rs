@@ -13,94 +13,178 @@ use super::Grid;
  */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VecGrid<T> {
-    pub grid: Vec<Vec<T>>,
+    width: u8,
+    grid: Vec<T>,
 }
 impl<T> VecGrid<T> {
     pub fn empty() -> Self {
         Self {
             grid: Vec::with_capacity(0),
+            width: 0,
         }
     }
 }
 
+pub const NEIGHBORS: [(i8, i8); 8] = [
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (0, -1),
+    (0, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+];
+
 impl<T> Grid for VecGrid<T> {
-    fn get(&self, x: impl TryInto<u8>, y: impl TryInto<u8>) -> Option<&T> {
-        let x: u8 = x.try_into().ok()?;
-        let y: u8 = y.try_into().ok()?;
-        self.grid
-            .get(usize::try_from(y).ok()?)
-            .and_then(|vec| vec.get(usize::try_from(x).ok()?))
+    type Index = (u8, u8);
+    type Item = T;
+
+    fn get(&self, (x, y): Self::Index) -> Option<&T> {
+        if x >= self.width {
+            return None;
+        };
+        let index = usize::from(y) * usize::from(self.width) + usize::from(x);
+        self.grid.get(usize::from(index))
     }
-    fn get_mut(&mut self, x: impl TryInto<u8>, y: impl TryInto<u8>) -> Option<&mut T> {
-        let x: u8 = x.try_into().ok()?;
-        let y: u8 = y.try_into().ok()?;
-        self.grid
-            .get_mut(usize::try_from(y).ok()?)
-            .and_then(|vec| vec.get_mut(usize::try_from(x).ok()?))
+    fn get_mut(&mut self, (x, y): Self::Index) -> Option<&mut T> {
+        if x >= self.width {
+            return None;
+        };
+        let index = usize::from(y) * usize::from(self.width) + usize::from(x);
+        self.grid.get_mut(usize::from(index))
     }
 
-    type Index = u8;
-    type Tile = T;
+    fn iter(&self) -> impl Iterator<Item = (Self::Index, &Self::Item)> {
+        self.grid.iter().enumerate().map(|(index, item)| {
+            (
+                (
+                    (index % self.width as usize) as u8,
+                    (index / self.width as usize) as u8,
+                ),
+                item,
+            )
+        })
+    }
+
+    fn iter_mut(&mut self) -> impl Iterator<Item = (Self::Index, &mut Self::Item)> {
+        self.grid.iter_mut().enumerate().map(|(index, item)| {
+            (
+                (
+                    (index % self.width as usize) as u8,
+                    (index / self.width as usize) as u8,
+                ),
+                item,
+            )
+        })
+    }
+
+    fn iter_around(&self, (x, y): Self::Index) -> impl Iterator<Item = (Self::Index, &Self::Item)> {
+        return self
+            .iter_around_indexes((x, y))
+            .filter_map(move |(dx, dy)| {
+                return self.get((dx, dy)).map(|item| ((dx, dy), item));
+            });
+    }
+
+    fn iter_around_mut(
+        &mut self,
+        (x, y): Self::Index,
+    ) -> impl Iterator<Item = (Self::Index, &mut Self::Item)> {
+        let mut indexes = NEIGHBORS.map(|(dx, dy)| {
+            let x = x.checked_add_signed(dx)?;
+            let y = y.checked_add_signed(dy)?;
+            if x >= self.width || y >= (self.grid.len() / self.width as usize) as u8 {
+                return None;
+            }
+            return Some((x, y));
+        });
+        self.grid
+            .get_disjoint_mut(indexes.map(|option| {
+                let Some((x, y)) = option else {
+                    return 0..0usize;
+                };
+                let index = x as usize + y as usize * self.width as usize;
+                return index..(index + 1);
+            }))
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .flat_map(move |(i, r)| {
+                let index = indexes[i].take();
+                r.iter_mut().map(move |item| (index.unwrap(), item))
+            })
+    }
+    fn iter_around_indexes(
+        &self,
+        (x, y): Self::Index,
+    ) -> impl Iterator<Item = Self::Index> + 'static {
+        let width = self.width;
+        let height = (self.grid.len() / width as usize) as u8;
+        NEIGHBORS.iter().filter_map(move |(dx, dy)| {
+            let x = x.checked_add_signed(*dx)?;
+            let y = y.checked_add_signed(*dy)?;
+            if x >= width || y >= height {
+                return None;
+            }
+            return Some((x, y));
+        })
+    }
 }
 
 impl Default for VecGrid<TileState> {
     fn default() -> Self {
-        let mut grid: Vec<Vec<TileState>> = Default::default();
-        for _y in 0..20 {
-            let mut col = vec![];
-            for _x in 0..20 {
-                col.push(TileState::Untouched);
+        let mut grid: Vec<TileState> = Default::default();
+        let width = 20u8;
+        for _y in 0..width {
+            for _x in 0..width {
+                grid.push(TileState::Untouched);
             }
-            grid.push(col);
         }
-        Self { grid }
+        Self { grid, width }
     }
 }
 
 #[cfg(feature = "server")]
 impl VecGrid<Tile> {
     pub fn new(width: u8, height: u8) -> Self {
-        let mut grid: Vec<Vec<Tile>> = Vec::with_capacity(height.into());
+        let mut grid: Vec<Tile> = Vec::with_capacity(height as usize * width as usize);
         for _y in 0..height {
-            let mut col = Vec::with_capacity(width.into());
             for _x in 0..width {
-                col.push(Tile {
+                grid.push(Tile {
                     content: TileContent::Empty,
                     state: TileState::Untouched,
                 });
             }
-            grid.push(col);
         }
-        Self { grid }
+        Self { grid, width }
     }
-    pub fn populate(&mut self, input_x: i32, input_y: i32) {
-        let height = self.grid.len();
-        let width = self.grid.get(0).map(|v| v.len()).unwrap_or(0);
-        for (y, x) in (0..height)
-            .flat_map(|y| (0..width).map(move |x| (y, x)))
-            .filter(|(y, x)| x.abs_diff(input_x as usize) > 2 || y.abs_diff(input_y as usize) > 2)
+    pub fn width(&self) -> u8 {
+        return self.width;
+    }
+    pub fn height(&self) -> u8 {
+        return (self.grid.len() / self.width as usize) as u8;
+    }
+    pub fn populate(&mut self, input_x: u8, input_y: u8) {
+        for (y, x) in (0..self.height())
+            .flat_map(|y| (0..self.width()).map(move |x| (y, x)))
+            .filter(|(y, x)| x.abs_diff(input_x) > 2 || y.abs_diff(input_y) > 2)
             .collect::<Vec<_>>()
             .partial_shuffle(
                 &mut ThreadRng::default(),
-                usize::from(u16::from(width as u16) * u16::from(height as u16) / 5u16),
+                (self.width() as usize) * (self.height() as usize) / 5usize,
             )
             .0
         {
-            for dy in -1..=1i16 {
-                for dx in -1..=1i16 {
-                    let Ok(x) = u8::try_from(dx + i16::from(*x as u8)) else {continue;};
-                    let Ok(y) = u8::try_from(dy + i16::from(*y as u8)) else {continue;};
-                    if let Some(Tile { content, state: _ }) = self.get_mut(x, y) {
-                        if dx == 0 && dy == 0 {
-                            *content = TileContent::Bomb;
-                        } else {
-                            match content {
-                                TileContent::Empty => *content = TileContent::Number(1),
-                                TileContent::Number(n) => *n += 1,
-                                TileContent::Bomb => (),
-                            }
-                        }
-                    }
+            let Some(tile) = self.get_mut((*x, *y)) else {
+                continue;
+            };
+            tile.content = TileContent::Bomb;
+            for ((_x, _y), tile) in self.iter_around_mut((*x, *y)) {
+                match &mut tile.content {
+                    TileContent::Empty => tile.content = TileContent::Number(1),
+                    TileContent::Number(n) => *n += 1,
+                    TileContent::Bomb => (),
                 }
             }
         }
@@ -116,11 +200,8 @@ impl Default for VecGrid<Tile> {
 impl From<&VecGrid<Tile>> for VecGrid<TileState> {
     fn from(value: &VecGrid<Tile>) -> Self {
         Self {
-            grid: value
-                .grid
-                .iter()
-                .map(|col| col.iter().map(|tile| tile.state).collect())
-                .collect(),
+            grid: value.iter().map(|(_, tile)| tile.state).collect(),
+            width: value.width,
         }
     }
 }

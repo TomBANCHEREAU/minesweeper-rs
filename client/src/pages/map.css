@@ -1,0 +1,42 @@
+.list {
+  position: relative;
+  top: 50px;
+  right: 50px;
+  width: 30%;
+  margin-left: 70%;
+  bottom: 50px;
+  margin-bottom: 100px;
+  border-radius: 10px;
+}
+.ship-list-item {
+  list-style-type: none;
+  margin: 8px;
+}
+.ship-list-item a {
+  color: inherit;
+  list-style-type: none;
+  border: black solid 1px;
+  padding: 8px;
+  display: flex;
+  text-decoration: inherit;
+  border-radius: 4px;
+  flex-direction: column;
+}
+.ship-list-item div {
+  flex-grow: 1;
+  display: flex;
+}
+.ship-list-item h3 {
+  flex-grow: 1;
+  margin: 0;
+}
+.ship-list-item p {
+  margin: 0;
+}
+.map {
+  background-color: darkslategrey;
+}
+ol {
+  margin: 0;
+  padding: 0;
+}

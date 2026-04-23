@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem::swap;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::spawn;
 use std::vec;
 
 use serde::{Deserialize, Serialize};
 
-use crate::grid::Grid;
 /**
  * How can we describe the game ?
  * We can play a move
@@ -24,7 +21,8 @@ use crate::grid::Grid;
 //         // fn listen_area(&mut self); ?
 //     }
 // }
-use crate::grid::{vec_grid::VecGrid, NEIGHBORS};
+use crate::grid::vec_grid::VecGrid;
+use crate::grid::Grid;
 use crate::tile::{Tile, TileContent, TileState};
 
 // pub trait GameObserver: Observer<GameEvent> {}
@@ -63,12 +61,12 @@ impl Game {
             GameAction::Discover { x, y } => {
                 if !self.populated {
                     self.populated = true;
-                    self.grid.populate(x, y);
+                    self.grid.populate(x as u8, y as u8);
                 }
-                self.discover_tile(x, y);
+                self.discover_tile(x as u8, y as u8);
             }
             GameAction::PlaceFlag { x, y } => {
-                if let Some(tile) = self.grid.get_mut(x, y) {
+                if let Some(tile) = self.grid.get_mut((x as u8, y as u8)) {
                     match tile.state {
                         TileState::Untouched => {
                             tile.state = TileState::Flagged;
@@ -83,7 +81,7 @@ impl Game {
                 }
             }
             GameAction::RemoveFlag { x, y } => {
-                if let Some(tile) = self.grid.get_mut(x, y) {
+                if let Some(tile) = self.grid.get_mut((x as u8, y as u8)) {
                     match tile.state {
                         TileState::Flagged => {
                             tile.state = TileState::Untouched;
@@ -106,22 +104,32 @@ impl Game {
     fn emit_event(&mut self, event: GameEvent) {
         self.events.push(event);
     }
-    fn discover_tile(&mut self, x: i32, y: i32) {
-        let Some(tile) = self.grid.get_mut(x, y) else { return };
+    fn discover_tile(&mut self, x: u8, y: u8) {
+        let Some(tile) = self.grid.get_mut((x as u8, y as u8)) else {
+            return;
+        };
         match tile.state {
             TileState::Untouched => match tile.content {
                 TileContent::Empty => {
                     tile.state = TileState::Discovered(tile.content);
                     let state = tile.state;
-                    self.emit_event(GameEvent::TileStateUpdate { x, y, state });
-                    NEIGHBORS.iter().for_each(|(dx, dy)| {
-                        self.discover_tile(x + i32::from(*dx), y + i32::from(*dy))
+                    self.emit_event(GameEvent::TileStateUpdate {
+                        x: x as i32,
+                        y: y as i32,
+                        state,
                     });
+                    self.grid
+                        .iter_around_indexes((x, y))
+                        .for_each(|(dx, dy)| self.discover_tile(dx, dy));
                 }
                 TileContent::Number(_) => {
                     tile.state = TileState::Discovered(tile.content);
                     let state = tile.state;
-                    self.emit_event(GameEvent::TileStateUpdate { x, y, state });
+                    self.emit_event(GameEvent::TileStateUpdate {
+                        x: x as i32,
+                        y: y as i32,
+                        state,
+                    });
                 }
                 TileContent::Bomb => self.emit_event(GameEvent::GameOver {}),
             },

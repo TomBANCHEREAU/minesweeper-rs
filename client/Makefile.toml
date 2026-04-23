@@ -1,7 +1,0 @@
-[tasks.workspace-dev]
-command="trunk"
-args=["watch"]
-
-[tasks.build]
-command="trunk"
-args=["build"]

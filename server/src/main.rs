@@ -16,11 +16,10 @@ async fn main() -> Result<(), std::io::Error> {
     let api_config = api::ApiConfig::default();
     HttpServer::new(move || {
         App::new()
+            .wrap(Authenticate)
             .wrap(NormalizePath::new(TrailingSlash::Trim))
             .wrap(Logger::new("%r %s %T"))
-            .wrap(Authenticate)
             .service(scope("/api").configure(api_config.configure()))
-            .service(actix_files::Files::new("/images", "../client/images"))
             .service(
                 actix_files::Files::new("/", "../client/dist")
                     .index_file("index.html")
